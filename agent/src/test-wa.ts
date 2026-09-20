@@ -1,6 +1,6 @@
 // Uji awal WA (PRD §11): scan QR, kirim 1 pesan teks ke nomor uji, cetak pesan masuk ke log.
 // Jalankan: npm run test-wa -- 62812xxxxxxx "halo tes"
-import makeWASocket, { useMultiFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
+import { makeWASocket, useMultiFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
 import qrcode from "qrcode-terminal";
 import { Boom } from "@hapi/boom";
 

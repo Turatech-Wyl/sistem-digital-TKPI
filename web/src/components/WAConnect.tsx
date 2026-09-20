@@ -5,6 +5,7 @@ type St = { connected: boolean; phone?: string; updated_at?: string; last_error?
 
 export default function WAConnect() {
   const [st, setSt] = useState<St | null>(null);
+  const [tick, setTick] = useState(0); // paksa gambar QR refresh (QR kedaluwarsa ±20 dtk)
   const muat = async () => {
     try {
       const r = await fetch("/api/wa/status", { cache: "no-store" });
@@ -13,10 +14,11 @@ export default function WAConnect() {
   };
   useEffect(() => {
     muat();
-    const t = setInterval(muat, 5000);
+    const t = setInterval(() => { muat(); setTick((x) => x + 1); }, 5000);
     return () => clearInterval(t);
   }, []);
   if (!st) return <p style={{ fontSize: "0.84rem", color: "var(--muted)" }}>Memuat status…</p>;
+  const umurQR = st.updated_at ? Math.max(0, Math.round((Date.now() - new Date(st.updated_at).getTime()) / 1000)) : 999;
   return (
     <div className="two">
       <div style={{ display: "grid", gap: 8, justifyItems: "center", alignContent: "start" }}>
@@ -27,8 +29,11 @@ export default function WAConnect() {
         ) : st.ada_qr ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/api/wa/qr?t=${Date.now()}`} alt="QR WhatsApp" width={240} height={240} style={{ borderRadius: 12, border: "1px solid var(--line)" }} key={st.updated_at} />
-            <p style={{ fontSize: "0.8rem", color: "var(--muted)", textAlign: "center" }}>Scan dari HP sekolah: WhatsApp → Perangkat Tertaut → Tautkan. Sekali saja.</p>
+            <img src={`/api/wa/qr?t=${tick}`} alt="QR WhatsApp" width={240} height={240} style={{ borderRadius: 12, border: "1px solid var(--line)" }} />
+            <p style={{ fontSize: "0.8rem", color: umurQR > 25 ? "var(--red)" : "var(--muted)", textAlign: "center" }}>
+              {umurQR > 25 ? "QR ini basi — tunggu QR baru muncul otomatis." : `QR baru ${umurQR} dtk lalu — segera scan (±20 dtk).`}
+            </p>
+            <p style={{ fontSize: "0.8rem", color: "var(--muted)", textAlign: "center" }}>HP sekolah: WhatsApp → Perangkat Tertaut → Tautkan. Sekali saja.</p>
           </>
         ) : (
           <div className="notice">{!st.agent_jalan ? "Agent belum jalan. Nyalakan: cd agent && npm run start" : (st.last_error || "Menunggu QR dari agent…")}</div>
