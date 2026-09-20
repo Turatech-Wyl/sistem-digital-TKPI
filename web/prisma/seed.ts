@@ -45,6 +45,14 @@ async function main() {
   await set("wa_sekolah", process.env.WA_SEKOLAH || "62812xxxxxxx");
   await set("tpl_pengingat", "Assalamualaikum Bapak/Ibu {orang_tua}, SPP {nama_siswa} bulan {bulan} sebesar {nominal} belum kami terima. Pembayaran ke {rekening}. Terima kasih 🙏 — Asisten TK");
   await set("tpl_lunas", "Alhamdulillah, pembayaran SPP {nama_siswa} bulan {bulan} sebesar {nominal} sudah kami terima. Kwitansi terlampir. Terima kasih 🙏 — Asisten TK");
+  await set("tpl_bukti", "Terima kasih, bukti pembayaran sudah kami terima dan akan diverifikasi maksimal 1×24 jam.");
+  if (!(await db.pengetahuan.findFirst())) {
+    await db.pengetahuan.createMany({ data: [
+      { pertanyaan: "Jam masuk sekolah jam berapa?", jawaban: "Senin–Jumat masuk pukul 07.30, pulang pukul 10.30. Sabtu kegiatan bebas sampai pukul 09.30." },
+      { pertanyaan: "Seragam apa saja?", jawaban: "Senin–Selasa seragam putih-merah, Rabu batik, Kamis muslim, Jumat olahraga." },
+      { pertanyaan: "Libur semester kapan?", jawaban: "Mengikuti kalender pendidikan. Pengumuman libur dikirim via grup WA kelas." },
+    ] });
+  }
 
   // 10 ortu, 12 siswa (2 ortu punya 2 anak)
   const ortuData = [

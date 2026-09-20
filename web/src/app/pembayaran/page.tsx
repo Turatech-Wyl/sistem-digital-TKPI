@@ -67,7 +67,22 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
       await db.tagihan.update({ where: { id: tagihan_id }, data: { status: "lunas" } });
       const kat = await db.kasKategori.findUnique({ where: { nama: "SPP" } });
       if (kat) await db.kas.create({ data: { tgl, jenis: "masuk", kategori_id: kat.id, keterangan: `SPP ${tag.siswa.nama} ${tag.periode}`, nominal: tag.nominal, pembayaran_id: byr.id, dibuat_oleh: ss.email } });
-      await db.waPesan.create({ data: { arah: "keluar", nomor: wa, isi: `Alhamdulillah, pembayaran SPP ${tag.siswa.nama} bulan ${tag.periode} sudah kami terima. — Asisten TK`, status: "antre", sumber: "bot" } });
+      const wa = tag.siswa.orang_tua[0]?.orang_tua.wa_utama || "-";
+      // Simpan PDF kwitansi ke media + antrekan ke WA ortu (PRD §5.4 langkah 4)
+      let media: string | null = null;
+      try {
+        const { dataKwitansi, pdfKwitansi } = await import("@/lib/kwitansi");
+        const dk = await dataKwitansi(byr.id);
+        if (dk) {
+          const fs = await import("fs");
+          const path = await import("path");
+          const dir = process.env.DATA_DIR || path.resolve(process.cwd(), "../data");
+          fs.mkdirSync(path.join(dir, "media"), { recursive: true });
+          media = path.join(dir, "media", `kwitansi-${byr.id}.pdf`);
+          fs.writeFileSync(media, await pdfKwitansi(dk));
+        }
+      } catch { /* tanpa lampiran, pesan tetap terkirim */ }
+      await db.waPesan.create({ data: { arah: "keluar", nomor: wa, isi: `Alhamdulillah, pembayaran SPP ${tag.siswa.nama} bulan ${tag.periode} sudah kami terima. Kwitansi terlampir. Terima kasih 🙏 — Asisten TK`, media_file: media, status: "antre", sumber: "bot" } });
     } else {
       const alasan = String(form.get("alasan") || "Bukti tidak valid");
       await db.tagihan.update({ where: { id: tagihan_id }, data: { status: "belum" } });
@@ -79,17 +94,47 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
     redirect(`/pembayaran?periode=${tag.periode}&toast=` + encodeURIComponent(aksi === "terima" ? "Bukti diterima, tagihan lunas ✓" : "Bukti ditolak, ortu diminta kirim ulang"));
   }
 
-  const [list, tarif] = await Promise.all([
+  /** Tautkan bukti tak dikenal ke siswa (satu nomor dua anak, PRD §5.4). */
+  async function tautkan(form: FormData) {
+    "use server";
+    const ss = await (await import("@/lib/auth")).sesi();
+    if (!ss || ss.peran !== "admin") return;
+    const { db } = await import("@/lib/db");
+    const siswa_id = Number(form.get("siswa_id"));
+    const tag = await db.tagihan.findFirst({ where: { siswa_id, status: "belum" }, orderBy: { periode: "asc" } });
+    if (tag) await db.tagihan.update({ where: { id: tag.id }, data: { status: "menunggu_verifikasi" } });
+    const { catatAudit } = await import("@/lib/audit");
+    await catatAudit(ss.email, "tagihan", "tautkan-bukti", String(tag?.id || ""), { status: "belum" }, { status: "menunggu_verifikasi" });
+    const { redirect } = await import("next/navigation");
+    redirect(`/pembayaran?toast=` + encodeURIComponent(tag ? "Bukti ditautkan, siap verifikasi ✓" : "Tidak ada tagihan belum lunas untuk siswa ini"));
+  }
+
+  const [list, tarif, buktiMasuk] = await Promise.all([
     db.tagihan.findMany({
       where: { periode },
       include: { siswa: { include: { kelas: true, orang_tua: { include: { orang_tua: true } } } }, pembayaran: true },
       orderBy: { status: "asc" },
     }),
     db.tarif.findMany({ include: { kelas: true } }),
+    // Bukti foto 30 hari terakhir dari pengirim multi-anak yang belum tertaut
+    db.waPesan.findMany({ where: { arah: "masuk", media_file: { not: null }, dibuat_pada: { gte: new Date(Date.now() - 30 * 86400_000) } }, orderBy: { dibuat_pada: "desc" }, take: 20 }),
   ]);
   const lunas = list.filter((t) => t.status === "lunas");
   const belum = list.filter((t) => t.status !== "lunas");
   const nominalInfo = tarif.length ? tarif.map((t) => `${t.kelas.nama} ${rupiah(t.nominal)}`).join(" · ") : "";
+  const buktiInfo = await Promise.all(buktiMasuk.map(async (b) => {
+    const o = await db.orangTua.findFirst({
+      where: { OR: [{ wa_utama: b.nomor }, { wa_kedua: b.nomor }] },
+      include: { anak: { include: { siswa: { include: { kelas: true } } } } },
+    });
+    const anak = o?.anak.map((a) => a.siswa) || [];
+    let tertaut = false;
+    for (const a of anak) {
+      if (await db.tagihan.count({ where: { siswa_id: a.id, status: "menunggu_verifikasi" } })) tertaut = true;
+    }
+    return { b, anak, tertaut };
+  }));
+  const perluTaut = buktiInfo.filter((x) => !x.tertaut && x.anak.length !== 1);
 
   return (
     <AppShell peran={s.peran} nama={s.nama} badge={belum.length || undefined}>
@@ -146,6 +191,30 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
         </table>
       </div>
       {list.length === 0 && <div className="notice">Belum ada tagihan periode ini. Klik <b>Generate tagihan</b>.</div>}
+      {s.peran === "admin" && perluTaut.length > 0 && (
+        <div className="card">
+          <h4>Bukti belum tertaut ke siswa ({perluTaut.length})</h4>
+          {perluTaut.map((x) => (
+            <div key={x.b.id} className="row" style={{ alignItems: "center", padding: "8px 0", borderTop: "1px solid var(--line)" }}>
+              {x.b.media_file && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <a href={`/api/media/${x.b.media_file.split("/").pop()}`} target="_blank"><img src={`/api/media/${x.b.media_file.split("/").pop()}`} alt="bukti" width={72} style={{ borderRadius: 8, border: "1px solid var(--line)" }} /></a>
+              )}
+              <span style={{ fontSize: "0.8rem" }}><b>{x.b.nomor}</b><br />{x.b.isi.slice(0, 60)}</span>
+              {x.anak.length > 1 ? (
+                <form action={tautkan} className="row">
+                  <select name="siswa_id" className="field" style={{ padding: "6px 8px" }}>
+                    {x.anak.map((a) => <option key={a.id} value={a.id}>{a.nama} ({a.kelas.nama})</option>)}
+                  </select>
+                  <SubmitButton className="btn light">Tautkan</SubmitButton>
+                </form>
+              ) : (
+                <span style={{ fontSize: "0.76rem", color: "var(--muted)" }}>Pengirim tak dikenal — hubungi manual</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </AppShell>
   );
 }

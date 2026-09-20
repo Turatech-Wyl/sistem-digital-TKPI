@@ -6,6 +6,8 @@ import fs from "fs";
 import path from "path";
 import { db, DATA_DIR } from "./db.js";
 import { tulisStatus, tulisQR, hapusQR } from "./status.js";
+import { tanganiTeks, tanganiBukti, tanganiNiat, balasAI, anakDariNomor } from "./bot.js";
+import { tanyaAI, niatAIkeBot } from "./ai.js";
 
 let sock: WASocket | null = null;
 export const getSock = () => sock;
@@ -79,25 +81,47 @@ export async function connect() {
 
   sock.ev.on("messages.upsert", async (m) => {
     for (const msg of m.messages) {
-      if (msg.key.fromMe) continue;
-      const nomor = (msg.key.remoteJid || "").replace(/[^0-9]/g, "");
-      if (!nomor || msg.key.remoteJid?.endsWith("@g.us")) continue; // abaikan grup
+      const jid = msg.key.remoteJid || "";
+      if (jid.endsWith("@g.us")) continue; // abaikan grup
+      const nomor = jid.replace(/[^0-9]/g, "");
+      if (!nomor) continue;
+      // Balasan manual TU dari HP (<10 mnt → bot diam + batalkan antrean bot, PRD §6.2)
+      if (msg.key.fromMe) {
+        const teksKeluar = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
+        if (teksKeluar) {
+          db.prepare("INSERT INTO WaPesan (arah, nomor, isi, status, sumber) VALUES ('keluar', ?, ?, 'terkirim', 'tu')").run(nomor, `[HP] ${teksKeluar}`);
+          db.prepare("DELETE FROM WaPesan WHERE arah='keluar' AND status='antre' AND nomor=? AND sumber IN ('bot','ai')").run(nomor);
+          console.log(`TU manual ke ${nomor}: antrean bot dibatalkan`);
+        }
+        continue;
+      }
       const teks = msg.message?.conversation || msg.message?.extendedTextMessage?.text || "";
-      // Media (foto bukti transfer tahap 4): simpan file, catat pesan
       const media = msg.message?.imageMessage || msg.message?.documentMessage;
       if (media) {
+        let fp: string | null = null;
         try {
           const buf = await downloadMediaMessage(msg, "buffer", {});
-          const fp = path.join(DATA_DIR, "media", `wa-${Date.now()}.jpg`);
+          fp = path.join(DATA_DIR, "media", `wa-${Date.now()}.jpg`);
           fs.writeFileSync(fp, buf as Buffer);
-          simpanMasuk(nomor, teks || "[gambar]", fp);
-          console.log(`MASUK media dari ${nomor} → ${fp}`);
-        } catch (e) {
-          simpanMasuk(nomor, teks || "[gambar gagal diunduh]");
-        }
+        } catch { /* catat tanpa file */ }
+        simpanMasuk(nomor, teks || "[gambar]", fp);
+        console.log(`MASUK media dari ${nomor} → ${fp}`);
+        tanganiBukti(nomor, fp);
       } else if (teks) {
         simpanMasuk(nomor, teks);
         console.log(`MASUK dari ${nomor}: ${teks.slice(0, 80)}`);
+        // 1) aturan, 2) AI, 3) inbox
+        if (!tanganiTeks(nomor, teks)) {
+          const anak = anakDariNomor(nomor);
+          if (anak.length) {
+            tanyaAI(teks, anak.map((a) => a.nama.split(" ")[0])).then((h) => {
+              if (!h) return; // tidak yakin / kuota habis → inbox
+              const nb = niatAIkeBot(h.niat);
+              if (nb) tanganiNiat(nomor, nb, anak);
+              else if (h.niat === "umum" && h.jawaban && h.yakin >= 0.7) balasAI(nomor, h.jawaban);
+            }).catch((e) => console.log("AI error:", (e as Error).message));
+          }
+        }
       }
     }
   });

@@ -22,9 +22,14 @@ export default async function PengaturanPage() {
     const ss = await (await import("@/lib/auth")).sesi();
     if (!ss || ss.peran !== "admin") return;
     const { db } = await import("@/lib/db");
-    for (const k of ["sekolah_nama", "sekolah_alamat", "rekening_bank", "rekening_nomor", "rekening_nama", "jatuh_tempo_tgl", "wa_sekolah", "tpl_pengingat", "tpl_lunas"]) {
+    for (const k of ["sekolah_nama", "sekolah_alamat", "rekening_bank", "rekening_nomor", "rekening_nama", "jatuh_tempo_tgl", "wa_sekolah", "tpl_pengingat", "tpl_lunas", "tpl_bukti"]) {
       const v = form.get(k);
       if (v !== null) await db.pengaturan.upsert({ where: { kunci: k }, update: { nilai: String(v) }, create: { kunci: k, nilai: String(v) } });
+    }
+    // Kunci AI: hanya timpa bila diisi (jangan tampilkan ulang)
+    for (const k of ["gemini_key", "groq_key"]) {
+      const v = String(form.get(k) || "").trim();
+      if (v) await db.pengaturan.upsert({ where: { kunci: k }, update: { nilai: v }, create: { kunci: k, nilai: v } });
     }
     const { catatAudit } = await import("@/lib/audit");
     await catatAudit(ss.email, "pengaturan", "simpan", "umum", {}, { sekolah: String(form.get("sekolah_nama")) });
@@ -43,12 +48,38 @@ export default async function PengaturanPage() {
     redirect("/pengaturan?toast=" + encodeURIComponent("Pengaturan tersimpan ✓"));
   }
 
-  const keys = ["sekolah_nama", "sekolah_alamat", "rekening_bank", "rekening_nomor", "rekening_nama", "jatuh_tempo_tgl", "wa_sekolah", "tpl_pengingat", "tpl_lunas"];
+  async function tambahTahu(form: FormData) {
+    "use server";
+    const ss = await (await import("@/lib/auth")).sesi();
+    if (!ss || ss.peran !== "admin") return;
+    const { db } = await import("@/lib/db");
+    const q = String(form.get("q") || "").trim();
+    const a = String(form.get("a") || "").trim();
+    if (!q || !a) return;
+    await db.pengetahuan.create({ data: { pertanyaan: q, jawaban: a } });
+    const { redirect } = await import("next/navigation");
+    redirect("/pengaturan?toast=" + encodeURIComponent("Pengetahuan ditambah ✓"));
+  }
+
+  async function hapusTahu(form: FormData) {
+    "use server";
+    const ss = await (await import("@/lib/auth")).sesi();
+    if (!ss || ss.peran !== "admin") return;
+    const { db } = await import("@/lib/db");
+    await db.pengetahuan.delete({ where: { id: Number(form.get("id")) } });
+    const { redirect } = await import("next/navigation");
+    redirect("/pengaturan?toast=" + encodeURIComponent("Pengetahuan dihapus"));
+  }
+
+  const keys = ["sekolah_nama", "sekolah_alamat", "rekening_bank", "rekening_nomor", "rekening_nama", "jatuh_tempo_tgl", "wa_sekolah", "tpl_pengingat", "tpl_lunas", "tpl_bukti"];
   const vals: Record<string, string> = {};
   for (const k of keys) vals[k] = await get(k);
   const tarif = await db.tarif.findMany({ include: { kelas: true }, orderBy: { berlaku_sejak: "desc" } });
   const tarifNow: Record<string, number> = {};
   for (const t of tarif) if (!(t.kelas.nama in tarifNow)) tarifNow[t.kelas.nama] = t.nominal;
+  const tahu = await db.pengetahuan.findMany({ orderBy: { id: "asc" } });
+  const geminiAda = !!(await db.pengaturan.findUnique({ where: { kunci: "gemini_key" } }))?.nilai;
+  const groqAda = !!(await db.pengaturan.findUnique({ where: { kunci: "groq_key" } }))?.nilai;
 
   return (
     <AppShell peran={s.peran} nama={s.nama}>
@@ -76,8 +107,28 @@ export default async function PengaturanPage() {
           <textarea name="tpl_pengingat" rows={3} defaultValue={vals.tpl_pengingat} className="field" /></label>
         <label className="f">Template lunas
           <textarea name="tpl_lunas" rows={3} defaultValue={vals.tpl_lunas} className="field" /></label>
+        <label className="f">Template bukti diterima
+          <textarea name="tpl_bukti" rows={2} defaultValue={vals.tpl_bukti} className="field" /></label>
+        <div className="f2">
+          <label className="f">Gemini API key {geminiAda ? "(terisi ✓)" : "(kosong — AI dilewati)"}<input name="gemini_key" type="password" placeholder="Isi untuk mengganti" className="field" /></label>
+          <label className="f">Groq API key {groqAda ? "(terisi ✓)" : "(kosong)"}<input name="groq_key" type="password" placeholder="Isi untuk mengganti" className="field" /></label>
+        </div>
         <SubmitButton>Simpan pengaturan</SubmitButton>
       </form>
+      <div className="card">
+        <h4>Basis pengetahuan AI (pertanyaan umum sekolah)</h4>
+        {tahu.map((t) => (
+          <div key={t.id} className="row" style={{ padding: "6px 0", borderTop: "1px solid var(--line)" }}>
+            <span style={{ fontSize: "0.8rem", flex: 1 }}><b>{t.pertanyaan}</b><br />{t.jawaban}</span>
+            <form action={hapusTahu}><input type="hidden" name="id" value={t.id} /><button className="btn light">Hapus</button></form>
+          </div>
+        ))}
+        <form action={tambahTahu} className="row" style={{ marginTop: 8 }}>
+          <input name="q" required placeholder="Pertanyaan (mis. jam masuk?)" className="field" style={{ flex: 1 }} />
+          <input name="a" required placeholder="Jawaban" className="field" style={{ flex: 2 }} />
+          <SubmitButton className="btn light">Tambah</SubmitButton>
+        </form>
+      </div>
       <div className="card">
         <h4>WhatsApp — hubungkan nomor sekolah (Baileys)</h4>
         <WAConnect />
