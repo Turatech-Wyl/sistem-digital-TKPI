@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import WAConnect from "@/components/WAConnect";
 import { sesi } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -74,7 +75,7 @@ export default async function PengaturanPage() {
       </form>
       <div className="card">
         <h4>WhatsApp — hubungkan nomor sekolah (Baileys)</h4>
-        <p style={{ fontSize: "0.84rem", color: "var(--muted)" }}>Tahap 3: QR scan akan muncul di sini setelah agent dijalankan (<code>agent/</code>). Uji awal: <code>npm run test-wa -- 62812xxxxxxx</code> dari folder agent.</p>
+        <WAConnect />
       </div>
     </AppShell>
   );

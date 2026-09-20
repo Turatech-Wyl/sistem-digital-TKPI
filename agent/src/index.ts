@@ -1,43 +1,24 @@
-// Agent WA penuh (tahap 3-4): antrean wa_pesan, reconnect, anti-ban (jeda 20-40 dtk, maks 50/jam).
-// Untuk sekarang: kerangka koneksi + cron tagihan/pengingat/backup. Bot aturan + AI menyusul tahap 4.
-import makeWASocket, { useMultiFileAuthState, DisconnectReason } from "@whiskeysockets/baileys";
-import qrcode from "qrcode-terminal";
-import { Boom } from "@hapi/boom";
+// Agent WA Tahap 3 (PRD §6): koneksi Baileys, antrean kirim, pesan masuk,
+// pengingat terjadwal, generate tagihan tgl 1, backup 02.00.
 import cron from "node-cron";
+import { connect, getSock } from "./wa.js";
+import { loopAntrean } from "./sender.js";
+import { buatPengingat } from "./reminder.js";
+import { generateTagihan, jalanBackup } from "./jobs.js";
+import { tulisStatus } from "./status.js";
 
-const JEDA_MIN = 20_000, JEDA_MAX = 40_000;
-const jeda = () => new Promise((r) => setTimeout(r, JEDA_MIN + Math.random() * (JEDA_MAX - JEDA_MIN)));
+tulisStatus({ connected: false, updated_at: new Date().toISOString(), last_error: "agent baru dinyalakan" });
+await connect();
+loopAntrean(getSock);
 
-async function connect() {
-  const { state, saveCreds } = await useMultiFileAuthState("./auth");
-  const sock = makeWASocket({ auth: state, printQRInTerminal: false });
-  sock.ev.on("creds.update", saveCreds);
-  sock.ev.on("connection.update", (u) => {
-    if (u.qr) {
-      console.log("Scan QR dari halaman Pengaturan WA:");
-      qrcode.generate(u.qr, { small: true });
-    }
-    if (u.connection === "open") console.log("Agent terhubung.");
-    if (u.connection === "close") {
-      const code = (u.lastDisconnect?.error as Boom)?.output?.statusCode;
-      if (code !== DisconnectReason.loggedOut) setTimeout(connect, 10_000);
-    }
-  });
-  sock.ev.on("messages.upsert", (m) => {
-    for (const msg of m.messages) {
-      if (msg.key.fromMe) continue;
-      console.log("MASUK:", msg.key.remoteJid, msg.message?.conversation || "[media]");
-      // TODO tahap 4: cocokkan niat 6.4, simpan bukti, antre balasan dengan jeda acak
-    }
-  });
-  return sock;
-}
+// Tagihan otomatis tiap tanggal 1 pukul 00.05 (PRD §5.3)
+cron.schedule("5 0 1 * *", () => {
+  const d = new Date();
+  generateTagihan(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+});
+// Pengingat: cek tiap 10 menit, hanya 07.00–09.00 Senin–Sabtu (PRD §6.3)
+cron.schedule("*/10 7-8 * * 1-6", () => buatPengingat());
+// Backup harian 02.00 (PRD §10)
+cron.schedule("0 2 * * *", () => jalanBackup());
 
-// Penjadwal (PRD §9): tagihan tgl 1 00.05, backup 02.00, pengingat 07.00 Senin-Sabtu
-cron.schedule("5 0 1 * *", () => console.log("CRON: generate tagihan (TODO: panggil lib web)"));
-cron.schedule("0 2 * * *", () => console.log("CRON: backup SQLite + media (TODO)"));
-cron.schedule("0 7 * * 1-6", () => console.log("CRON: pengiriman pengingat 07.00 (TODO: baca antrean)"));
-
-connect();
-console.log("Agent jalan. Ctrl+C untuk berhenti.");
-export { jeda };
+console.log("Agent jalan: antrean 60 dtk, pengingat 10 mnt, tagihan tgl 1, backup 02.00.");

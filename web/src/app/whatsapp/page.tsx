@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import { sesi } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { bacaStatusWA } from "@/lib/wafile";
 
 export default async function WAPage() {
   const s = await sesi();
@@ -34,11 +35,12 @@ export default async function WAPage() {
     db.pengaturan.findUnique({ where: { kunci: "wa_sekolah" } }),
   ]);
   const perlu = pesan.filter((p) => p.arah === "masuk" && !p.dibaca_tu).length;
+  const wa = bacaStatusWA();
 
   return (
     <AppShell peran={s.peran} nama={s.nama}>
       <div className="s-head">
-        <h3>WhatsApp Sekolah<small>{waSekolah?.nilai || "-"} · <span style={{ color: "var(--green)" }}>Terhubung</span> · {perlu} perlu dibalas</small></h3>
+        <h3>WhatsApp Sekolah<small>{waSekolah?.nilai || "-"} · {wa.connected ? <span style={{ color: "var(--green)" }}>Terhubung</span> : <span style={{ color: "var(--red)" }}>Putus — hubungkan di Pengaturan</span>} · {perlu} perlu dibalas</small></h3>
         <a href="/pengaturan" className="btn light">Jadwal: tgl 1 &amp; 10</a>
       </div>
       <div className="two">

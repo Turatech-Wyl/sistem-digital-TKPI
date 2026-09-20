@@ -3,6 +3,7 @@ import AppShell from "@/components/AppShell";
 import { sesi } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { rupiah, periodeBulanIni, bulanNama } from "@/lib/format";
+import { bacaStatusWA } from "@/lib/wafile";
 
 export default async function Dashboard() {
   const s = await sesi();
@@ -46,6 +47,8 @@ export default async function Dashboard() {
     perBulan.push(agg._sum.nominal || 0);
   }
   const maxB = Math.max(1, ...perBulan);
+  const wa = bacaStatusWA();
+  const jeda = (await db.pengaturan.findUnique({ where: { kunci: "wa_jeda" } }))?.nilai === "1";
 
   return (
     <AppShell peran={s.peran} nama={s.nama} badge={belum.length || undefined}>
@@ -79,17 +82,25 @@ export default async function Dashboard() {
             ))}
           </div>
         </div>
-        <div className="card">
-          <h4>WhatsApp hari ini</h4>
-          <table className="grid-t">
-            <tbody>
-              <tr><td>Tagihan belum lunas</td><td className="num"><b>{belum.length}</b></td></tr>
-              <tr><td>Bukti menunggu verifikasi</td><td className="num"><b>{menunggu}</b></td></tr>
-              <tr><td>Pesan perlu dibalas</td><td className="num"><b>{perluBalas}</b></td></tr>
-            </tbody>
-          </table>
-          <div style={{ marginTop: 8 }}><a href="/whatsapp" className="btn light">Buka inbox</a></div>
+      <div className="card">
+        <h4>WhatsApp hari ini · {wa.connected ? <span style={{ color: "var(--green)" }}>Terhubung</span> : <span style={{ color: "var(--red)" }}>Putus</span>}{jeda ? " · bot dijeda" : ""}</h4>
+        <table className="grid-t">
+          <tbody>
+            <tr><td>Tagihan belum lunas</td><td className="num"><b>{belum.length}</b></td></tr>
+            <tr><td>Bukti menunggu verifikasi</td><td className="num"><b>{menunggu}</b></td></tr>
+            <tr><td>Pesan perlu dibalas</td><td className="num"><b>{perluBalas}</b></td></tr>
+          </tbody>
+        </table>
+        <div className="row" style={{ marginTop: 8 }}>
+          <a href="/whatsapp" className="btn light">Buka inbox</a>
+          {s.peran === "admin" && (
+            <>
+              {!wa.connected && <a href="/pengaturan" className="btn light">Scan ulang</a>}
+              <form method="POST" action="/api/wa/jeda"><button className="btn light">{jeda ? "Lanjutkan bot" : "Jeda bot"}</button></form>
+            </>
+          )}
         </div>
+      </div>
       </div>
       <div className="two">
         <div className="card tbl">
