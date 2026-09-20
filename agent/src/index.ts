@@ -1,7 +1,7 @@
 // Agent WA Tahap 3 (PRD §6): koneksi Baileys, antrean kirim, pesan masuk,
 // pengingat terjadwal, generate tagihan tgl 1, backup 02.00.
 import cron from "node-cron";
-import { connect, getSock } from "./wa.js";
+import { connect, getSock, perluSambungUlang, sambungUlang } from "./wa.js";
 import { loopAntrean } from "./sender.js";
 import { buatPengingat } from "./reminder.js";
 import { generateTagihan, jalanBackup } from "./jobs.js";
@@ -20,5 +20,14 @@ cron.schedule("5 0 1 * *", () => {
 cron.schedule("*/10 7-8 * * 1-6", () => buatPengingat());
 // Backup harian 02.00 (PRD §10)
 cron.schedule("0 2 * * *", () => jalanBackup());
+
+// Watchdog QR tiap 30 dtk: server WA kadang berhenti mengirim QR baru (PRD §6.1 reconnect)
+setInterval(async () => {
+  try {
+    if (perluSambungUlang()) await sambungUlang();
+  } catch (e) {
+    console.log("Watchdog error:", (e as Error).message);
+  }
+}, 30_000);
 
 console.log("Agent jalan: antrean 60 dtk, pengingat 10 mnt, tagihan tgl 1, backup 02.00.");

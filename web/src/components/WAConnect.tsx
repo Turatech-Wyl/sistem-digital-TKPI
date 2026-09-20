@@ -34,6 +34,9 @@ export default function WAConnect() {
               {umurQR > 25 ? "QR ini basi — tunggu QR baru muncul otomatis." : `QR baru ${umurQR} dtk lalu — segera scan (±20 dtk).`}
             </p>
             <p style={{ fontSize: "0.8rem", color: "var(--muted)", textAlign: "center" }}>HP sekolah: WhatsApp → Perangkat Tertaut → Tautkan. Sekali saja.</p>
+            <form method="POST" action="/api/wa/qrbaru">
+              <button className="btn light">Minta QR baru</button>
+            </form>
           </>
         ) : (
           <div className="notice">{!st.agent_jalan ? "Agent belum jalan. Nyalakan: cd agent && npm run start" : (st.last_error || "Menunggu QR dari agent…")}</div>

@@ -9,8 +9,24 @@ import { tulisStatus, tulisQR, hapusQR } from "./status.js";
 
 let sock: WASocket | null = null;
 export const getSock = () => sock;
+let qrTerakhir = 0;
+let tersambung = false;
 
-/** Diputus dari HP atau tombol web: sesi tak berlaku → QR baru (scan ulang). */
+/** Watchdog: kalau tidak tersambung dan QR mandek >45 dtk (atau diminta), sambung ulang. */
+export function perluSambungUlang(): boolean {
+  if (tersambung) return false;
+  if (fs.existsSync(path.join(DATA_DIR, "qrreq.req"))) return true;
+  return qrTerakhir > 0 && Date.now() - qrTerakhir > 45_000;
+}
+
+export async function sambungUlang() {
+  fs.rmSync(path.join(DATA_DIR, "qrreq.req"), { force: true });
+  try { (sock as unknown as { ws?: { close(): void } })?.ws?.close(); } catch { /* abaikan */ }
+  sock = null;
+  qrTerakhir = 0;
+  console.log("Menyambung ulang untuk QR baru…");
+  await connect();
+}
 export async function cekPermintaanPutus() {
   const f = path.join(DATA_DIR, "unlink.req");
   if (!fs.existsSync(f)) return;
@@ -40,14 +56,17 @@ export async function connect() {
       console.log("Scan QR dari halaman Pengaturan → WhatsApp:");
       qrcodeTerm.generate(qr, { small: true });
       await tulisQR(qr);
+      qrTerakhir = Date.now();
     }
     if (connection === "open") {
       hapusQR();
+      tersambung = true;
       const phone = (sock?.user?.id || "").split(":")[0];
       tulisStatus({ connected: true, phone, updated_at: new Date().toISOString() });
       console.log("Agent terhubung sebagai perangkat tertaut:", phone);
     }
     if (connection === "close") {
+      tersambung = false;
       const code = (lastDisconnect?.error as Boom)?.output?.statusCode;
       tulisStatus({ connected: false, updated_at: new Date().toISOString(), last_error: `putus (${code})` });
       console.log("Koneksi tertutup, kode:", code);
