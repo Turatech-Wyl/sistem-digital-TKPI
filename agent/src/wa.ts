@@ -10,6 +10,19 @@ import { tulisStatus, tulisQR, hapusQR } from "./status.js";
 let sock: WASocket | null = null;
 export const getSock = () => sock;
 
+/** Diputus dari HP atau tombol web: sesi tak berlaku → QR baru (scan ulang). */
+export async function cekPermintaanPutus() {
+  const f = path.join(DATA_DIR, "unlink.req");
+  if (!fs.existsSync(f)) return;
+  fs.rmSync(f, { force: true });
+  try { await sock?.logout(); } catch { /* abaikan */ }
+  fs.rmSync(path.join(process.cwd(), "auth"), { recursive: true, force: true });
+  sock = null;
+  tulisStatus({ connected: false, updated_at: new Date().toISOString(), last_error: "diputus oleh TU" });
+  console.log("Perangkat diputus atas permintaan TU. Membuat QR baru…");
+  setTimeout(connect, 3000);
+}
+
 function simpanMasuk(nomor: string, isi: string, media?: string) {
   const ortu = db.prepare("SELECT id FROM OrangTua WHERE wa_utama=? OR wa_kedua=?").get(nomor, nomor) as { id: number } | undefined;
   db.prepare("INSERT INTO WaPesan (arah, nomor, orang_tua_id, isi, media_file, status, sumber) VALUES ('masuk', ?, ?, ?, ?, 'dibaca', 'tu')")

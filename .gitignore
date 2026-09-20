@@ -15,6 +15,7 @@ data/*.db
 data/qr.png
 data/qr.txt
 data/wa-status.json
+data/unlink.req
 data/media/*
 data/backup/*
 !data/.gitkeep

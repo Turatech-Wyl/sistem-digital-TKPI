@@ -45,6 +45,11 @@ export default function WAConnect() {
         <form method="POST" action="/api/wa/jeda">
           <button className="btn light">{st.jeda ? "Lanjutkan bot" : "Jeda bot"}</button>
         </form>
+        {st.connected && (
+          <form method="POST" action="/api/wa/unlink" onSubmit={(e) => { if (!confirm("Putuskan perangkat WA dari aplikasi? Harus scan QR ulang.")) e.preventDefault(); }}>
+            <button className="btn light" style={{ color: "var(--red)" }}>Putuskan perangkat</button>
+          </form>
+        )}
         <p style={{ color: "var(--muted)" }}>Jadwal pengingat: tgl 1, 10, 17, 24, 31 · 07.00–09.00 Senin–Sabtu · jeda 20–40 dtk · maks 50/jam.</p>
       </div>
     </div>
