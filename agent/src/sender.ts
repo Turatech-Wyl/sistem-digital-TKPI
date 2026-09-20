@@ -44,9 +44,14 @@ export async function prosesAntrean(sock: WASocket) {
 /** Loop selamanya tiap 60 detik. */
 export async function loopAntrean(getSock: () => WASocket | null) {
   const { cekPermintaanPutus } = await import("./wa.js");
+  const { apakahTerhubung } = await import("./wa.js");
   for (;;) {
     try {
       await cekPermintaanPutus();
+      if (!apakahTerhubung()) {
+        await new Promise((r) => setTimeout(r, 30_000));
+        continue;
+      }
       const sock = getSock();
       if (sock) await prosesAntrean(sock);
     } catch (e) {

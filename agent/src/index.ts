@@ -1,6 +1,10 @@
 // Agent WA Tahap 3 (PRD §6): koneksi Baileys, antrean kirim, pesan masuk,
 // pengingat terjadwal, generate tagihan tgl 1, backup 02.00.
 import cron from "node-cron";
+
+// Jangan mati karena error async yang tak tertangani (mis. timeout jaringan) — cukup catat
+process.on("unhandledRejection", (e) => console.log("Unhandled rejection (tetap jalan):", (e as Error)?.message || e));
+process.on("uncaughtException", (e) => console.log("Uncaught exception (tetap jalan):", (e as Error)?.message || e));
 import { connect, getSock, perluSambungUlang, sambungUlang } from "./wa.js";
 import { loopAntrean } from "./sender.js";
 import { buatPengingat } from "./reminder.js";

@@ -9,6 +9,7 @@ import { tulisStatus, tulisQR, hapusQR } from "./status.js";
 
 let sock: WASocket | null = null;
 export const getSock = () => sock;
+export const apakahTerhubung = () => tersambung && sock !== null;
 let qrTerakhir = 0;
 let tersambung = false;
 
