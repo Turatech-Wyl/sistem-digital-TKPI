@@ -139,6 +139,15 @@ async function main() {
   }
 
   // 8 transaksi kas contoh tambahan + 6 pesan WA contoh
+  const katMasukLain = await db.kasKategori.upsert({ where: { nama: "Saldo awal" }, update: {}, create: { nama: "Saldo awal", jenis: "masuk" } });
+  const katDaftar = await db.kasKategori.findUnique({ where: { nama: "Pendaftaran" } });
+  // Saldo awal + pendaftaran agar kas contoh tidak minus (12 siswa × SPP vs gaji sebulan)
+  if (!(await db.kas.findFirst({ where: { keterangan: "Saldo awal tahun ajaran" } }))) {
+    await db.kas.create({ data: { tgl: "2026-07-01", jenis: "masuk", kategori_id: katMasukLain.id, keterangan: "Saldo awal tahun ajaran", nominal: 8000000 } });
+  }
+  if (katDaftar && !(await db.kas.findFirst({ where: { keterangan: "Pendaftaran siswa baru TA 2026" } }))) {
+    await db.kas.create({ data: { tgl: "2026-07-05", jenis: "masuk", kategori_id: katDaftar.id, keterangan: "Pendaftaran siswa baru TA 2026", nominal: 3000000 } });
+  }
   const katKeluar = await db.kasKategori.findUnique({ where: { nama: "Operasional" } });
   const katGaji = await db.kasKategori.findUnique({ where: { nama: "Gaji guru dan staf" } });
   if (katKeluar && katGaji) {
