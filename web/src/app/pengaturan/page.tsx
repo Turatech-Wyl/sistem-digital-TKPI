@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
+import AppShell from "@/components/AppShell";
 import { sesi } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -22,7 +22,6 @@ export default async function PengaturanPage() {
       const v = form.get(k);
       if (v !== null) await db.pengaturan.upsert({ where: { kunci: k }, update: { nilai: String(v) }, create: { kunci: k, nilai: String(v) } });
     }
-    // tarif per kelas
     for (const [kelas, field] of [["KB", "tarif_KB"], ["TK A", "tarif_TKA"], ["TK B", "tarif_TKB"]] as const) {
       const v = Number(form.get(field));
       if (v > 0) {
@@ -44,39 +43,37 @@ export default async function PengaturanPage() {
   for (const t of tarif) if (!(t.kelas.nama in tarifNow)) tarifNow[t.kelas.nama] = t.nominal;
 
   return (
-    <div className="flex min-h-screen max-md:flex-col">
-      <Sidebar peran={s.peran} nama={s.nama} />
-      <main className="flex-1 p-6 grid gap-4 content-start max-w-3xl">
-        <h1 className="text-xl font-extrabold text-[#16181f]">Pengaturan</h1>
-        <p className="text-sm text-[#6f7583]">Semua placeholder PRD §13 bisa diubah di sini tanpa mengubah kode.</p>
-        <form action={simpan} className="bg-white border rounded-xl p-4 grid gap-3">
-          <label className="grid gap-1 text-sm font-semibold">Nama sekolah<input name="sekolah_nama" defaultValue={vals.sekolah_nama} className="border rounded-lg px-3 py-2 font-normal" /></label>
-          <label className="grid gap-1 text-sm font-semibold">Alamat<input name="sekolah_alamat" defaultValue={vals.sekolah_alamat} className="border rounded-lg px-3 py-2 font-normal" /></label>
-          <div className="grid grid-cols-3 gap-2">
-            <label className="grid gap-1 text-sm font-semibold">Bank<input name="rekening_bank" defaultValue={vals.rekening_bank} className="border rounded-lg px-3 py-2 font-normal" /></label>
-            <label className="grid gap-1 text-sm font-semibold">No. rekening<input name="rekening_nomor" defaultValue={vals.rekening_nomor} className="border rounded-lg px-3 py-2 font-normal" /></label>
-            <label className="grid gap-1 text-sm font-semibold">Atas nama<input name="rekening_nama" defaultValue={vals.rekening_nama} className="border rounded-lg px-3 py-2 font-normal" /></label>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="grid gap-1 text-sm font-semibold">Jatuh tempo (tgl)<input name="jatuh_tempo_tgl" defaultValue={vals.jatuh_tempo_tgl} className="border rounded-lg px-3 py-2 font-normal" /></label>
-            <label className="grid gap-1 text-sm font-semibold">WA sekolah<input name="wa_sekolah" defaultValue={vals.wa_sekolah} className="border rounded-lg px-3 py-2 font-normal" /></label>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            {(["KB", "TK A", "TK B"] as const).map((k) => (
-              <label key={k} className="grid gap-1 text-sm font-semibold">Tarif {k}<input name={`tarif_${k.replace(" ", "")}`} type="number" defaultValue={tarifNow[k] || ""} className="border rounded-lg px-3 py-2 font-normal" /></label>
-            ))}
-          </div>
-          <label className="grid gap-1 text-sm font-semibold">Template pengingat <span className="font-normal text-[#6f7583]">variabel: {"{orang_tua} {nama_siswa} {bulan} {nominal} {rekening}"}</span>
-            <textarea name="tpl_pengingat" rows={3} defaultValue={vals.tpl_pengingat} className="border rounded-lg px-3 py-2 font-normal" /></label>
-          <label className="grid gap-1 text-sm font-semibold">Template lunas
-            <textarea name="tpl_lunas" rows={3} defaultValue={vals.tpl_lunas} className="border rounded-lg px-3 py-2 font-normal" /></label>
-          <button className="bg-[#3b6cf6] text-white text-sm font-bold rounded-lg py-2">Simpan pengaturan</button>
-        </form>
-        <div className="bg-white border rounded-xl p-4">
-          <h2 className="font-bold text-sm mb-2">WhatsApp — hubungkan nomor sekolah (Baileys)</h2>
-          <p className="text-sm text-[#6f7583]">Tahap 3: QR akan muncul di sini setelah agent dijalankan (<code>agent/</code>). Untuk uji awal, jalankan skrip minimal agent untuk scan QR + kirim 1 pesan.</p>
+    <AppShell peran={s.peran} nama={s.nama}>
+      <div className="s-head">
+        <h3>Pengaturan<small>Semua placeholder PRD §13 — ubah di sini tanpa menyentuh kode</small></h3>
+      </div>
+      <form action={simpan} className="form-card">
+        <label className="f">Nama sekolah<input name="sekolah_nama" defaultValue={vals.sekolah_nama} className="field" /></label>
+        <label className="f">Alamat<input name="sekolah_alamat" defaultValue={vals.sekolah_alamat} className="field" /></label>
+        <div className="f2">
+          <label className="f">Bank<input name="rekening_bank" defaultValue={vals.rekening_bank} className="field" /></label>
+          <label className="f">No. rekening<input name="rekening_nomor" defaultValue={vals.rekening_nomor} className="field" /></label>
         </div>
-      </main>
-    </div>
+        <label className="f">Rekening atas nama<input name="rekening_nama" defaultValue={vals.rekening_nama} className="field" /></label>
+        <div className="f2">
+          <label className="f">Jatuh tempo (tgl)<input name="jatuh_tempo_tgl" defaultValue={vals.jatuh_tempo_tgl} className="field" /></label>
+          <label className="f">WA sekolah<input name="wa_sekolah" defaultValue={vals.wa_sekolah} className="field" /></label>
+        </div>
+        <div className="f2">
+          {(["KB", "TK A", "TK B"] as const).map((k) => (
+            <label key={k} className="f">Tarif {k}<input name={`tarif_${k.replace(" ", "")}`} type="number" defaultValue={tarifNow[k] || ""} className="field" /></label>
+          ))}
+        </div>
+        <label className="f">Template pengingat <span className="hint">{"{orang_tua} {nama_siswa} {bulan} {nominal} {rekening}"}</span>
+          <textarea name="tpl_pengingat" rows={3} defaultValue={vals.tpl_pengingat} className="field" /></label>
+        <label className="f">Template lunas
+          <textarea name="tpl_lunas" rows={3} defaultValue={vals.tpl_lunas} className="field" /></label>
+        <button className="btn">Simpan pengaturan</button>
+      </form>
+      <div className="card">
+        <h4>WhatsApp — hubungkan nomor sekolah (Baileys)</h4>
+        <p style={{ fontSize: "0.84rem", color: "var(--muted)" }}>Tahap 3: QR scan akan muncul di sini setelah agent dijalankan (<code>agent/</code>). Uji awal: <code>npm run test-wa -- 62812xxxxxxx</code> dari folder agent.</p>
+      </div>
+    </AppShell>
   );
 }

@@ -1,9 +1,6 @@
 import { redirect } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
+import AppShell from "@/components/AppShell";
 import { sesi } from "@/lib/auth";
-import * as XLSX from "xlsx";
-import { db } from "@/lib/db";
-import { normalisasiWA } from "@/lib/format";
 
 export default async function ImporPage() {
   const s = await sesi();
@@ -17,12 +14,11 @@ export default async function ImporPage() {
     const f = form.get("file") as File | null;
     if (!f) return;
     const buf = Buffer.from(await f.arrayBuffer());
-    const wb = (await import("xlsx")).read(buf, { type: "buffer" });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = (await import("xlsx")).utils.sheet_to_json<Record<string, string>>(ws);
+    const XLSX = await import("xlsx");
+    const wb = XLSX.read(buf, { type: "buffer" });
+    const rows = XLSX.utils.sheet_to_json<Record<string, string>>(wb.Sheets[wb.SheetNames[0]]);
     const { db } = await import("@/lib/db");
     const { normalisasiWA } = await import("@/lib/format");
-    let baru = 0, upd = 0;
     for (const r of rows) {
       const nama = String(r["Nama"] || r["nama"] || r["Nama Anak"] || "").trim();
       const kelasNama = String(r["Kelas"] || r["kelas"] || "TK A").trim();
@@ -30,16 +26,15 @@ export default async function ImporPage() {
       const ortu = String(r["Ortu"] || r["Orang tua"] || r["Nama Ortu"] || "-");
       const lahir = String(r["Lahir"] || r["Tgl Lahir"] || r["Tanggal lahir"] || "");
       if (!nama || !wa) continue;
-      const kelas = await db.kelas.findUnique({ where: { nama: kelasNama } }) || await db.kelas.findFirst();
+      const kelas = (await db.kelas.findUnique({ where: { nama: kelasNama } })) || await db.kelas.findFirst();
       if (!kelas) continue;
-      // dedup nama + tgl lahir
       const ex = await db.siswa.findFirst({ where: { nama, tgl_lahir: lahir || undefined } });
       let sid: number;
-      if (ex) { await db.siswa.update({ where: { id: ex.id }, data: { kelas_id: kelas.id } }); sid = ex.id; upd++; }
+      if (ex) { await db.siswa.update({ where: { id: ex.id }, data: { kelas_id: kelas.id } }); sid = ex.id; }
       else {
         const count = await db.siswa.count();
         const c = await db.siswa.create({ data: { nis: `IMP${Date.now().toString().slice(-5)}${count}`, nama, kelas_id: kelas.id, tgl_lahir: lahir, jk: "L", status: "aktif", dibuat_oleh: ss.email } });
-        sid = c.id; baru++;
+        sid = c.id;
       }
       let o = await db.orangTua.findFirst({ where: { wa_utama: wa } });
       if (!o) o = await db.orangTua.create({ data: { nama_ibu: ortu, wa_utama: wa, dibuat_oleh: ss.email } });
@@ -49,22 +44,33 @@ export default async function ImporPage() {
     (await import("next/cache")).revalidatePath("/siswa");
   }
 
+  const kolom = [
+    ["Nama Anak", "Nama siswa"], ["Kelas", "Kelas"], ["Nama Ortu", "Orang tua"],
+    ["No HP", "No. WA"], ["Tgl Lahir", "Tanggal lahir"], ["Ket.", "Abaikan"],
+  ];
+
   return (
-    <div className="flex min-h-screen max-md:flex-col">
-      <Sidebar peran={s.peran} nama={s.nama} />
-      <main className="flex-1 p-6 grid gap-4 content-start max-w-3xl">
-        <h1 className="text-xl font-extrabold text-[#16181f]">Impor dari Excel</h1>
-        <ol className="text-sm text-[#6f7583] list-decimal ml-5">
-          <li>Unggah .xlsx / .csv (ekspor Google Sheets). Baris pertama = judul kolom.</li>
-          <li>Kolom dikenali: Nama, Kelas, Ortu, WA, Lahir. Nomor WA dinormalisasi ke 62xxx.</li>
-          <li>Duplikat nama + tanggal lahir tidak digandakan, hanya diperbarui.</li>
-        </ol>
-        <form action={impor} className="bg-white border-2 border-dashed border-[#e8eaf0] rounded-xl p-8 grid gap-3 justify-items-center text-center">
-          <input type="file" name="file" accept=".xlsx,.csv" required className="text-sm" />
-          <button className="bg-[#3b6cf6] text-white text-sm font-bold rounded-lg px-6 py-2">Unggah & simpan</button>
-        </form>
-        <a href="/api/ekspor/siswa" className="text-sm font-bold text-[#3b6cf6]">Unduh template / data siswa saat ini (Excel) →</a>
-      </main>
-    </div>
+    <AppShell peran={s.peran} nama={s.nama}>
+      <div className="s-head">
+        <h3>Impor dari Excel<small>Langkah 2 dari 3</small></h3>
+        <a href="/api/ekspor/siswa" className="btn light">Unduh template</a>
+      </div>
+      <form action={impor}>
+        <div className="drop"><b>Pilih file .xlsx / .csv</b>Baris pertama = judul kolom · WA dinormalisasi ke 62xxx
+          <div style={{ marginTop: 10 }}><input type="file" name="file" accept=".xlsx,.csv" required style={{ fontSize: "0.84rem" }} /></div>
+          <div style={{ marginTop: 10 }}><button className="btn">Lanjut — simpan ke data siswa</button></div>
+        </div>
+      </form>
+      <div className="card">
+        <h4>Cocokkan kolom</h4>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 8 }}>
+          {kolom.map(([a, b], i) => (
+            <div key={a} style={{ padding: "9px 11px", borderRadius: 9, background: "var(--soft)", fontSize: "0.78rem", fontWeight: 600, opacity: i === 5 ? 0.5 : 1 }}>
+              {a}<span style={{ display: "block", fontWeight: 500, color: "var(--muted)", fontSize: "0.72rem" }}>→ {b}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </AppShell>
   );
 }

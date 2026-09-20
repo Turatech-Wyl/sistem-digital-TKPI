@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
+import AppShell from "@/components/AppShell";
 import { sesi } from "@/lib/auth";
 import { db } from "@/lib/db";
 
@@ -16,7 +16,7 @@ export default async function WAPage() {
     const nomor = String(form.get("nomor") || "");
     const isi = String(form.get("isi") || "");
     if (!nomor || !isi) return;
-    await db.waPesan.create({ data: { arah: "keluar", nomor, isi: isi + " ", status: "antre", sumber: "tu" } });
+    await db.waPesan.create({ data: { arah: "keluar", nomor, isi, status: "antre", sumber: "tu" } });
     await db.waPesan.updateMany({ where: { nomor, arah: "masuk", dibaca_tu: false }, data: { dibaca_tu: true } });
     (await import("next/cache")).revalidatePath("/whatsapp");
   }
@@ -24,50 +24,54 @@ export default async function WAPage() {
   async function tandai(form: FormData) {
     "use server";
     const { db } = await import("@/lib/db");
-    const id = Number(form.get("id"));
-    await db.waPesan.update({ where: { id }, data: { dibaca_tu: true } });
+    await db.waPesan.update({ where: { id: Number(form.get("id")) }, data: { dibaca_tu: true } });
     (await import("next/cache")).revalidatePath("/whatsapp");
   }
 
-  const pesan = await db.waPesan.findMany({ orderBy: { dibuat_pada: "desc" }, take: 60 });
-  const perlu = pesan.filter((p) => p.arah === "masuk" && !p.dibaca_tu);
+  const [pesan, tpl, waSekolah] = await Promise.all([
+    db.waPesan.findMany({ orderBy: { dibuat_pada: "desc" }, take: 60 }),
+    db.pengaturan.findUnique({ where: { kunci: "tpl_pengingat" } }),
+    db.pengaturan.findUnique({ where: { kunci: "wa_sekolah" } }),
+  ]);
+  const perlu = pesan.filter((p) => p.arah === "masuk" && !p.dibaca_tu).length;
 
   return (
-    <div className="flex min-h-screen max-md:flex-col">
-      <Sidebar peran={s.peran} nama={s.nama} />
-      <main className="flex-1 p-6 grid gap-4 content-start max-w-5xl">
-        <h1 className="text-xl font-extrabold text-[#16181f]">WhatsApp <span className="text-sm font-medium text-[#6f7583]">{perlu.length} perlu dibalas</span></h1>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm">
-          Agent Baileys: scan QR sekali dari <b>Pengaturan → WhatsApp</b> (tahap 3). Selama agent belum jalan, gunakan tautan <b>wa.me</b> cadangan per nomor. Semua balasan bot diakhiri “— Asisten TK”.
+    <AppShell peran={s.peran} nama={s.nama}>
+      <div className="s-head">
+        <h3>WhatsApp Sekolah<small>{waSekolah?.nilai || "-"} · <span style={{ color: "var(--green)" }}>Terhubung</span> · {perlu} perlu dibalas</small></h3>
+        <a href="/pengaturan" className="btn light">Jadwal: tgl 1 &amp; 10</a>
+      </div>
+      <div className="two">
+        <div className="card">
+          <h4>Template pengingat</h4>
+          <div className="msg" style={{ maxWidth: "100%" }}>{tpl?.nilai || "-"}</div>
+          <h4 style={{ marginTop: 14 }}>Balasan orang tua</h4>
+          <div className="msg" style={{ maxWidth: "100%" }}>Diteruskan otomatis ke nomor TU. Pesan yang tidak cocok aturan masuk inbox “perlu dibalas”.</div>
+          <h4 style={{ marginTop: 14 }}>Balas dari dashboard</h4>
+          <form action={balas} className="form-card" style={{ padding: 0 }}>
+            <input name="nomor" placeholder="62812xxxxxxx" className="field" required />
+            <textarea name="isi" rows={3} placeholder="Tulis balasan…" className="field" required />
+            <button className="btn wa">Kirim via nomor sekolah</button>
+          </form>
         </div>
-        <div className="grid grid-cols-[1fr_1fr] gap-2 max-md:grid-cols-1">
-          <div className="bg-white border rounded-xl p-4 grid gap-2 content-start">
-            <h2 className="font-bold text-sm">Balas dari dashboard (via nomor sekolah)</h2>
-            <form action={balas} className="grid gap-2">
-              <input name="nomor" placeholder="62812xxxxxxx" className="border rounded-lg px-3 py-2 text-sm" required />
-              <textarea name="isi" rows={3} placeholder="Tulis balasan…" className="border rounded-lg px-3 py-2 text-sm" required />
-              <button className="bg-emerald-600 text-white text-sm font-bold rounded-lg py-2">Kirim (masuk antrean agent)</button>
-            </form>
-          </div>
-          <div className="bg-white border rounded-xl p-4">
-            <h2 className="font-bold text-sm mb-2">Log pesan terakhir</h2>
-            <div className="grid gap-2 max-h-[480px] overflow-auto">
-              {pesan.map((p) => (
-                <div key={p.id} className={`text-sm rounded-lg p-2 ${p.arah === "masuk" ? "bg-[#f2f4f8]" : "bg-emerald-50"}`}>
-                  <div className="text-xs text-[#6f7583] font-semibold">{p.arah === "masuk" ? "←" : "→"} {p.nomor} · {p.sumber || "-"} · {p.status}</div>
-                  <div>{p.isi}</div>
-                  <div className="flex gap-2 items-center mt-1">
-                    <a className="text-xs font-bold text-emerald-700" href={`https://wa.me/${p.nomor}?text=${encodeURIComponent("Assalamualaikum, ") }`} target="_blank">wa.me ↗</a>
-                    {p.arah === "masuk" && !p.dibaca_tu && (
-                      <form action={tandai}><input type="hidden" name="id" value={p.id} /><button className="text-xs font-bold text-[#3b6cf6]">Tandai dibaca</button></form>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+        <div className="card">
+          <h4>Percakapan terakhir</h4>
+          <div className="chat" style={{ maxHeight: 480, overflow: "auto" }}>
+            {pesan.map((p) => (
+              <div key={p.id} className={`msg ${p.arah === "keluar" ? "me" : ""}`}>
+                {p.isi}
+                <small>{p.nomor} · {p.sumber || "-"} · {p.status}{p.arah === "masuk" && !p.dibaca_tu ? " · perlu dibalas" : ""}</small>
+                <span className="row" style={{ marginTop: 4 }}>
+                  <a href={`https://wa.me/${p.nomor}`} target="_blank" style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--green)" }}>wa.me ↗</a>
+                  {p.arah === "masuk" && !p.dibaca_tu && (
+                    <form action={tandai}><input type="hidden" name="id" value={p.id} /><button style={{ fontSize: "0.7rem", fontWeight: 700, color: "var(--blue)" }}>Tandai dibaca</button></form>
+                  )}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
