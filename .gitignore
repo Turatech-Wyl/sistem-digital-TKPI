@@ -9,7 +9,12 @@ web/node_modules/
 web/.next/
 web/prisma/*.db
 web/prisma/*.db-journal
+web/prisma/*.db-shm
+web/prisma/*.db-wal
 data/*.db
+data/qr.png
+data/qr.txt
+data/wa-status.json
 data/media/*
 data/backup/*
 !data/.gitkeep
