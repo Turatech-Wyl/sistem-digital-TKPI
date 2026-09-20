@@ -72,7 +72,7 @@ export default async function WAPage({ searchParams }: { searchParams: Promise<{
   const perluCount = semuaRoom.filter((r) => r.belum > 0).length;
   const rooms = tab === "semua" ? semuaRoom : semuaRoom.filter((r) => r.belum > 0);
   const aktif = sp.nomor ? map.get(sp.nomor) : rooms[0];
-  const thread = aktif ? pesan.filter((p) => p.nomor === aktif.nomor).sort((a, b) => a.waktu.getTime() - b.waktu.getTime()) : [];
+  const thread = aktif ? pesan.filter((p) => p.nomor === aktif.nomor).sort((a, b) => a.dibuat_pada.getTime() - b.dibuat_pada.getTime()) : [];
   const wa = bacaStatusWA();
   const jam = (d: Date) => new Date(d).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
