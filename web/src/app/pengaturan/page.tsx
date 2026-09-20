@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import WAConnect from "@/components/WAConnect";
+import { SubmitButton } from "@/components/SubmitButton";
 import { sesi } from "@/lib/auth";
 import { db } from "@/lib/db";
+
+export const metadata = { title: "Pengaturan" };
 
 async function get(k: string, fb = "") {
   const r = await db.pengaturan.findUnique({ where: { kunci: k } });
@@ -36,6 +39,8 @@ export default async function PengaturanPage() {
       }
     }
     (await import("next/cache")).revalidatePath("/pengaturan");
+    const { redirect } = await import("next/navigation");
+    redirect("/pengaturan?toast=" + encodeURIComponent("Pengaturan tersimpan ✓"));
   }
 
   const keys = ["sekolah_nama", "sekolah_alamat", "rekening_bank", "rekening_nomor", "rekening_nama", "jatuh_tempo_tgl", "wa_sekolah", "tpl_pengingat", "tpl_lunas"];
@@ -71,7 +76,7 @@ export default async function PengaturanPage() {
           <textarea name="tpl_pengingat" rows={3} defaultValue={vals.tpl_pengingat} className="field" /></label>
         <label className="f">Template lunas
           <textarea name="tpl_lunas" rows={3} defaultValue={vals.tpl_lunas} className="field" /></label>
-        <button className="btn">Simpan pengaturan</button>
+        <SubmitButton>Simpan pengaturan</SubmitButton>
       </form>
       <div className="card">
         <h4>WhatsApp — hubungkan nomor sekolah (Baileys)</h4>

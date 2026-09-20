@@ -3,18 +3,26 @@ import AppShell from "@/components/AppShell";
 import { sesi } from "@/lib/auth";
 import { db } from "@/lib/db";
 
-export default async function AuditPage() {
+export const metadata = { title: "Audit" };
+
+export default async function AuditPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const s = await sesi();
   if (!s) redirect("/login");
   if (s.peran !== "admin") redirect("/dashboard");
-  const rows = await db.audit.findMany({ orderBy: { waktu: "desc" }, take: 100 });
+  const sp = await searchParams;
+  const PER = 20;
+  const total = await db.audit.count();
+  const totalHal = Math.max(1, Math.ceil(total / PER));
+  const hal = Math.min(Math.max(1, Number(sp.page) || 1), totalHal);
+  const rows = await db.audit.findMany({ orderBy: { waktu: "desc" }, take: PER, skip: (hal - 1) * PER });
   const users = await db.pengguna.findMany();
   const nama = (id: number | null) => users.find((u) => u.id === id)?.email || "?";
 
   return (
     <AppShell peran={s.peran} nama={s.nama}>
       <div className="s-head">
-        <h3>Log Audit<small>100 aktivitas terakhir · tidak bisa dihapus</small></h3>
+        <h3>Log Audit<small>{total} aktivitas · tidak bisa dihapus</small></h3>
+        <span style={{ fontSize: "0.78rem", color: "var(--muted)" }}>Hal {hal}/{totalHal}</span>
       </div>
       <div className="card tbl">
         <table className="grid-t">
@@ -32,6 +40,13 @@ export default async function AuditPage() {
             {rows.length === 0 && <tr><td>Belum ada aktivitas tercatat.</td></tr>}
           </tbody>
         </table>
+        {totalHal > 1 && (
+          <div className="row" style={{ padding: 12, justifyContent: "center" }}>
+            {hal > 1 && <a href={`/audit?page=${hal - 1}`} className="btn light">← Prev</a>}
+            <span style={{ fontSize: "0.8rem", color: "var(--muted)" }}>Hal {hal} / {totalHal}</span>
+            {hal < totalHal && <a href={`/audit?page=${hal + 1}`} className="btn light">Next →</a>}
+          </div>
+        )}
       </div>
     </AppShell>
   );

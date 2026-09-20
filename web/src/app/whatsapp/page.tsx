@@ -1,9 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import AppShell from "@/components/AppShell";
+import { SubmitButton } from "@/components/SubmitButton";
 import { sesi } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { bacaStatusWA } from "@/lib/wafile";
+
+export const metadata = { title: "WhatsApp" };
 
 type Room = {
   nomor: string;
@@ -33,7 +36,7 @@ export default async function WAPage({ searchParams }: { searchParams: Promise<{
     await db.waPesan.create({ data: { arah: "keluar", nomor, isi, status: "antre", sumber: "tu" } });
     await db.waPesan.updateMany({ where: { nomor, arah: "masuk", dibaca_tu: false }, data: { dibaca_tu: true } });
     const { redirect } = await import("next/navigation");
-    redirect(`/whatsapp?nomor=${nomor}`);
+    redirect(`/whatsapp?nomor=${nomor}&toast=` + encodeURIComponent("Pesan masuk antrean agent ✓"));
   }
 
   async function tandaiSemua(form: FormData) {
@@ -131,7 +134,7 @@ export default async function WAPage({ searchParams }: { searchParams: Promise<{
               <form action={balas} className="row">
                 <input type="hidden" name="nomor" value={aktif.nomor} />
                 <input name="isi" required placeholder={`Balas ke ${aktif.nama}…`} className="field" style={{ flex: 1 }} />
-                <button className="btn wa">Kirim</button>
+                <SubmitButton className="btn wa">Kirim</SubmitButton>
               </form>
               <div className="row" style={{ marginTop: 8 }}>
                 <a href={`https://wa.me/${aktif.nomor}`} target="_blank" className="btn light">wa.me ↗</a>

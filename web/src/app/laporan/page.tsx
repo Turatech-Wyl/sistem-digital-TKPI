@@ -3,6 +3,9 @@ import AppShell from "@/components/AppShell";
 import { sesi } from "@/lib/auth";
 import { rekapSPP, daftarTunggakan } from "@/lib/laporan";
 import { rupiah, periodeBulanIni, bulanNama } from "@/lib/format";
+import PrintButton from "@/components/PrintButton";
+
+export const metadata = { title: "Laporan" };
 
 export default async function LaporanPage({ searchParams }: { searchParams: Promise<{ periode?: string }> }) {
   const s = await sesi();
@@ -24,6 +27,7 @@ export default async function LaporanPage({ searchParams }: { searchParams: Prom
           </form>
           <a href={`/api/ekspor/rekap?periode=${periode}`} className="btn light">Excel</a>
           <a href={`/api/laporan/rekap?periode=${periode}`} className="btn light">PDF</a>
+          <PrintButton />
         </div>
       </div>
       <div className="card tbl">

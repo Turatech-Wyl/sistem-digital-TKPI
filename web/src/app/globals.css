@@ -14,6 +14,34 @@
   color-scheme: light;
 }
 
+/* Mode gelap — variabel yang sama, komponen ikut otomatis */
+[data-theme="dark"] {
+  --bg: #0f1219; --ink: #eef1f8; --text: #c6cddd; --muted: #8b93a9;
+  --card: #171c28; --line: #262d40; --soft: #10141d;
+  --blue: #6b93ff; --blue-soft: #1e2a52;
+  --green: #34d399; --green-soft: #123a2c;
+  --amber: #fbbf24; --amber-soft: #45300f;
+  --red: #f87171; --red-soft: #4a1d1d;
+  --violet: #a78bfa; --violet-soft: #2c2352;
+  color-scheme: dark;
+}
+[data-theme="dark"] .st.ok { color: #6ee7b7; }
+[data-theme="dark"] .st.bad { color: #fca5a5; }
+[data-theme="dark"] .st.wn { color: #fcd34d; }
+[data-theme="dark"] .st.info { color: #93b4ff; }
+[data-theme="dark"] .in { color: #6ee7b7; }
+[data-theme="dark"] .out { color: #fca5a5; }
+[data-theme="dark"] .notice { color: #fcd34d; background: #2c230f; border-color: #574410; }
+
+/* Cetak laporan (Ctrl+P) */
+@media print {
+  .side, .btn, form, .no-print { display: none !important; }
+  .app { display: block; background: #fff; }
+  .screen { max-width: none; padding: 0; }
+  body { background: #fff; color: #000; font-size: 12px; }
+  .card, .kpi { border: 1px solid #ccc; break-inside: avoid; }
+}
+
 html { scroll-behavior: smooth; }
 body {
   font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;

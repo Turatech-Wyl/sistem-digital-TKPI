@@ -1,9 +1,12 @@
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import { SubmitButton } from "@/components/SubmitButton";
 import { sesi } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { rupiah, periodeBulanIni, bulanNama } from "@/lib/format";
 import { bacaStatusWA } from "@/lib/wafile";
+
+export const metadata = { title: "Dashboard" };
 
 export default async function Dashboard() {
   const s = await sesi();
@@ -17,7 +20,8 @@ export default async function Dashboard() {
     const { periodeBulanIni } = await import("@/lib/format");
     const { generateTagihan } = await import("@/lib/tagihan");
     await generateTagihan(periodeBulanIni(), ss.email);
-    (await import("next/cache")).revalidatePath("/dashboard");
+    const { redirect } = await import("next/navigation");
+    redirect("/dashboard?toast=" + encodeURIComponent("Tagihan bulan ini dibuat ✓"));
   }
 
   const [aktif, tagihan, kasMasuk, kasKeluar, menunggu, perluBalas, kasTerakhir] = await Promise.all([
@@ -56,7 +60,7 @@ export default async function Dashboard() {
         <h3>{bulanNama(periode)}<small>{hari}</small></h3>
         <div className="row">
           {s.peran === "admin" && (
-            <form action={buatTagihan}><button className="btn light">Buat tagihan bulan ini</button></form>
+            <form action={buatTagihan}><SubmitButton className="btn light">Buat tagihan bulan ini</SubmitButton></form>
           )}
           <a href={`/api/ekspor/tagihan?periode=${periode}`} className="btn light">Unduh laporan</a>
         </div>

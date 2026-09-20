@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
 import AppShell, { pill } from "@/components/AppShell";
+import { SubmitButton } from "@/components/SubmitButton";
 import { sesi } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { rupiah, periodeBulanIni, bulanNama } from "@/lib/format";
+
+export const metadata = { title: "Pembayaran" };
 
 export default async function PembayaranPage({ searchParams }: { searchParams: Promise<{ periode?: string }> }) {
   const s = await sesi();
@@ -18,7 +21,9 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
     const hasil = await generateTagihan(String(form.get("periode") || ""), ss.email);
     const { catatAudit } = await import("@/lib/audit");
     await catatAudit(ss.email, "tagihan", "generate", String(form.get("periode")), {}, hasil);
-    (await import("next/cache")).revalidatePath("/pembayaran");
+    const { redirect } = await import("next/navigation");
+    const p = String(form.get("periode"));
+    redirect(`/pembayaran?periode=${p}&toast=` + encodeURIComponent(`${hasil.dibuat} tagihan baru dibuat ✓`));
   }
 
   async function catatBayar(form: FormData) {
@@ -39,7 +44,8 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
     if (kat) await db.kas.create({ data: { tgl, jenis: "masuk", kategori_id: kat.id, keterangan: `SPP ${tag.siswa.nama} ${tag.periode}`, nominal: tag.nominal, pembayaran_id: byr.id, dibuat_oleh: ss.email } });
     const { catatAudit } = await import("@/lib/audit");
     await catatAudit(ss.email, "pembayaran", "tunai", String(byr.id), { tagihan_id }, { no_kwitansi: no, nominal: tag.nominal });
-    (await import("next/cache")).revalidatePath("/pembayaran");
+    const { redirect } = await import("next/navigation");
+    redirect(`/pembayaran?periode=${tag.periode}&toast=` + encodeURIComponent(`Tunai ${tag.siswa.nama} lunas ✓`));
   }
 
   async function verifikasi(form: FormData) {
@@ -69,7 +75,8 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
     }
     const { catatAudit } = await import("@/lib/audit");
     await catatAudit(ss.email, "pembayaran", `verifikasi-${aksi}`, String(tagihan_id), { status: "menunggu_verifikasi" }, { status: aksi === "terima" ? "lunas" : "belum" });
-    (await import("next/cache")).revalidatePath("/pembayaran");
+    const { redirect } = await import("next/navigation");
+    redirect(`/pembayaran?periode=${tag.periode}&toast=` + encodeURIComponent(aksi === "terima" ? "Bukti diterima, tagihan lunas ✓" : "Bukti ditolak, ortu diminta kirim ulang"));
   }
 
   const [list, tarif] = await Promise.all([
@@ -94,7 +101,7 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
             <button className="btn light">Lihat</button>
           </form>
           {s.peran === "admin" && (
-            <form action={generate}><input type="hidden" name="periode" value={periode} /><button className="btn">Generate tagihan</button></form>
+            <form action={generate}><input type="hidden" name="periode" value={periode} /><SubmitButton>Generate tagihan</SubmitButton></form>
           )}
         </div>
       </div>
@@ -120,14 +127,14 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
                       <form action={catatBayar} className="row">
                         <input type="hidden" name="tagihan_id" value={t.id} />
                         <input type="date" name="tgl" defaultValue={new Date().toISOString().slice(0, 10)} className="field" style={{ padding: "6px 8px" }} />
-                        <button className="btn wa" style={{ padding: "6px 10px" }}>Tunai ✓</button>
+                        <SubmitButton className="btn wa">Tunai ✓</SubmitButton>
                       </form>
                     )}
                     {t.status === "menunggu_verifikasi" && (
                       <form action={verifikasi} className="row">
                         <input type="hidden" name="tagihan_id" value={t.id} />
-                        <button name="aksi" value="terima" className="btn wa" style={{ padding: "6px 10px" }}>Terima</button>
-                        <button name="aksi" value="tolak" className="btn danger" style={{ padding: "6px 10px" }}>Tolak</button>
+                        <SubmitButton className="btn wa" name="aksi" value="terima">Terima</SubmitButton>
+                        <SubmitButton className="btn danger" name="aksi" value="tolak" confirm="Tolak bukti ini? Ortu akan diminta kirim ulang.">Tolak</SubmitButton>
                       </form>
                     )}
                     {t.status === "lunas" && <span className="st ok">Konfirmasi</span>}

@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import { SubmitButton } from "@/components/SubmitButton";
 import { sesi } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { rupiah } from "@/lib/format";
+
+export const metadata = { title: "Kas" };
 
 export default async function KasPage({ searchParams }: { searchParams: Promise<{ bulan?: string }> }) {
   const s = await sesi();
@@ -27,7 +30,8 @@ export default async function KasPage({ searchParams }: { searchParams: Promise<
     const r = await db.kas.create({ data });
     const { catatAudit } = await import("@/lib/audit");
     await catatAudit(ss.email, "kas", "tambah", String(r.id), {}, { keterangan: data.keterangan, nominal: data.nominal });
-    (await import("next/cache")).revalidatePath("/kas");
+    const { redirect } = await import("next/navigation");
+    redirect("/kas?toast=" + encodeURIComponent("Transaksi tersimpan ✓"));
   }
 
   async function tambahKategori(form: FormData) {
@@ -39,7 +43,8 @@ export default async function KasPage({ searchParams }: { searchParams: Promise<
     const jenis = String(form.get("jenis") || "keluar");
     if (!nama) return;
     try { await db.kasKategori.create({ data: { nama, jenis } }); } catch { /* sudah ada */ }
-    (await import("next/cache")).revalidatePath("/kas");
+    const { redirect } = await import("next/navigation");
+    redirect("/kas?toast=" + encodeURIComponent(`Kategori ${nama} tersimpan ✓`));
   }
 
   const [rows, kat] = await Promise.all([
@@ -92,7 +97,7 @@ export default async function KasPage({ searchParams }: { searchParams: Promise<
             <input name="nominal" type="number" required placeholder="Nominal" className="field" />
             <input name="keterangan" required placeholder="Keterangan" className="field" style={{ gridColumn: "1 / -1" }} />
           </div>
-          <button className="btn">Simpan transaksi</button>
+          <SubmitButton>Simpan transaksi</SubmitButton>
         </form>
       )}
       {s.peran === "admin" && (
@@ -101,7 +106,7 @@ export default async function KasPage({ searchParams }: { searchParams: Promise<
           <div className="row">
             <input name="nama" required placeholder="Nama kategori" className="field" style={{ flex: 1 }} />
             <select name="jenis" className="field"><option value="keluar">Keluar</option><option value="masuk">Masuk</option></select>
-            <button className="btn light">Tambah</button>
+            <SubmitButton className="btn light">Tambah</SubmitButton>
           </div>
         </form>
       )}

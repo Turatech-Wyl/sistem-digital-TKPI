@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import ThemeToggle from "./ThemeToggle";
 
 const I = {
   dash: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="9" rx="1.5" /><rect x="14" y="3" width="7" height="5" rx="1.5" /><rect x="14" y="12" width="7" height="9" rx="1.5" /><rect x="3" y="16" width="7" height="5" rx="1.5" /></svg>,
@@ -41,11 +42,17 @@ export default function Sidebar({ peran, nama, badge }: { peran: string; nama: s
       })}
       <div className="who">
         <b>{nama}</b>
-        <span className="capitalize">{peran}</span>
-        {" · "}
-        <form action="/api/auth/logout" method="POST" className="inline">
-          <button className="font-semibold hover:underline" style={{ color: "var(--red)" }}>Keluar</button>
-        </form>
+        <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <span className="capitalize">{peran}</span>
+          <ThemeToggle />
+        </span>
+        <span>
+          <Link href="/akun" style={{ fontWeight: 600 }}>Akun</Link>
+          {" · "}
+          <form action="/api/auth/logout" method="POST" className="inline">
+            <button className="font-semibold hover:underline" style={{ color: "var(--red)" }}>Keluar</button>
+          </form>
+        </span>
       </div>
     </nav>
   );

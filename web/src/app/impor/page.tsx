@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
+import { SubmitButton } from "@/components/SubmitButton";
 import { sesi } from "@/lib/auth";
+
+export const metadata = { title: "Impor" };
 
 export default async function ImporPage() {
   const s = await sesi();
@@ -42,6 +45,8 @@ export default async function ImporPage() {
       if (!link) await db.siswaOrangTua.create({ data: { siswa_id: sid, orang_tua_id: o.id } });
     }
     (await import("next/cache")).revalidatePath("/siswa");
+    const { redirect } = await import("next/navigation");
+    redirect("/siswa?toast=" + encodeURIComponent("Impor selesai ✓"));
   }
 
   const kolom = [
@@ -58,7 +63,7 @@ export default async function ImporPage() {
       <form action={impor}>
         <div className="drop"><b>Pilih file .xlsx / .csv</b>Baris pertama = judul kolom · WA dinormalisasi ke 62xxx
           <div style={{ marginTop: 10 }}><input type="file" name="file" accept=".xlsx,.csv" required style={{ fontSize: "0.84rem" }} /></div>
-          <div style={{ marginTop: 10 }}><button className="btn">Lanjut — simpan ke data siswa</button></div>
+          <div style={{ marginTop: 10 }}><SubmitButton>Lanjut — simpan ke data siswa</SubmitButton></div>
         </div>
       </form>
       <div className="card">
