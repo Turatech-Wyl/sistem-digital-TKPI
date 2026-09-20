@@ -22,6 +22,8 @@ export default async function PengaturanPage() {
       const v = form.get(k);
       if (v !== null) await db.pengaturan.upsert({ where: { kunci: k }, update: { nilai: String(v) }, create: { kunci: k, nilai: String(v) } });
     }
+    const { catatAudit } = await import("@/lib/audit");
+    await catatAudit(ss.email, "pengaturan", "simpan", "umum", {}, { sekolah: String(form.get("sekolah_nama")) });
     for (const [kelas, field] of [["KB", "tarif_KB"], ["TK A", "tarif_TKA"], ["TK B", "tarif_TKB"]] as const) {
       const v = Number(form.get(field));
       if (v > 0) {

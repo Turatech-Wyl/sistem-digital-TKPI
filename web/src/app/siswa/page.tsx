@@ -32,6 +32,8 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
       data: { nis, nama, kelas_id: kelas.id, tgl_lahir: String(form.get("lahir") || ""), jk: String(form.get("jk") || "L"), status: "aktif", dibuat_oleh: ss.email },
     });
     await db.siswaOrangTua.create({ data: { siswa_id: sw.id, orang_tua_id: ortu.id } });
+    const { catatAudit } = await import("@/lib/audit");
+    await catatAudit(ss.email, "siswa", "tambah", String(sw.id), {}, { nis, nama });
     (await import("next/cache")).revalidatePath("/siswa");
   }
 
@@ -40,7 +42,10 @@ export default async function SiswaPage({ searchParams }: { searchParams: Promis
     const ss = await (await import("@/lib/auth")).sesi();
     if (!ss || ss.peran !== "admin") return;
     const { db } = await import("@/lib/db");
+    const lama = await db.siswa.findUnique({ where: { id: Number(form.get("id")) } });
     await db.siswa.update({ where: { id: Number(form.get("id")) }, data: { status: String(form.get("status")) } });
+    const { catatAudit } = await import("@/lib/audit");
+    await catatAudit(ss.email, "siswa", "ubah-status", String(form.get("id")), { status: lama?.status }, { status: String(form.get("status")) });
     (await import("next/cache")).revalidatePath("/siswa");
   }
 

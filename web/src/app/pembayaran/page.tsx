@@ -15,7 +15,9 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
     const ss = await (await import("@/lib/auth")).sesi();
     if (!ss || ss.peran !== "admin") return;
     const { generateTagihan } = await import("@/lib/tagihan");
-    await generateTagihan(String(form.get("periode") || ""), ss.email);
+    const hasil = await generateTagihan(String(form.get("periode") || ""), ss.email);
+    const { catatAudit } = await import("@/lib/audit");
+    await catatAudit(ss.email, "tagihan", "generate", String(form.get("periode")), {}, hasil);
     (await import("next/cache")).revalidatePath("/pembayaran");
   }
 
@@ -35,6 +37,8 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
     await db.tagihan.update({ where: { id: tagihan_id }, data: { status: "lunas" } });
     const kat = await db.kasKategori.findUnique({ where: { nama: "SPP" } });
     if (kat) await db.kas.create({ data: { tgl, jenis: "masuk", kategori_id: kat.id, keterangan: `SPP ${tag.siswa.nama} ${tag.periode}`, nominal: tag.nominal, pembayaran_id: byr.id, dibuat_oleh: ss.email } });
+    const { catatAudit } = await import("@/lib/audit");
+    await catatAudit(ss.email, "pembayaran", "tunai", String(byr.id), { tagihan_id }, { no_kwitansi: no, nominal: tag.nominal });
     (await import("next/cache")).revalidatePath("/pembayaran");
   }
 
@@ -63,6 +67,8 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
       await db.tagihan.update({ where: { id: tagihan_id }, data: { status: "belum" } });
       await db.waPesan.create({ data: { arah: "keluar", nomor: wa, isi: `Mohon maaf, bukti pembayaran ditolak (${alasan}). Mohon kirim ulang. — Asisten TK`, status: "antre", sumber: "bot" } });
     }
+    const { catatAudit } = await import("@/lib/audit");
+    await catatAudit(ss.email, "pembayaran", `verifikasi-${aksi}`, String(tagihan_id), { status: "menunggu_verifikasi" }, { status: aksi === "terima" ? "lunas" : "belum" });
     (await import("next/cache")).revalidatePath("/pembayaran");
   }
 
