@@ -34,7 +34,7 @@ h1, h2, h3 { color: var(--ink); letter-spacing: -0.02em; }
 .side a .n { margin-left: auto; font-size: 0.7rem; padding: 1px 7px; border-radius: 999px; background: var(--red); color: #fff; font-weight: 700; }
 .side .who { margin-top: auto; padding: 12px 8px 2px; border-top: 1px solid var(--line); font-size: 0.78rem; color: var(--muted); }
 .side .who b { display: block; color: var(--ink); font-size: 0.86rem; }
-.screen { padding: 22px; display: grid; gap: 14px; align-content: start; min-width: 0; max-width: 1020px; }
+.screen { padding: 22px; display: grid; gap: 14px; align-content: start; min-width: 0; width: 100%; }
 .s-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .s-head h3 { font-size: 1.15rem; font-weight: 800; }
 .s-head small { display: block; font-size: 0.78rem; color: var(--muted); font-weight: 500; }
