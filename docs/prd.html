@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRD Sistem Administrasi TK</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap">
+<style>
+  :root { --bg:#fbfbfd; --ink:#16181f; --text:#2b2f3a; --muted:#6f7583; --card:#fff; --line:#e8eaf0; --soft:#f2f4f8;
+    --blue:#3b6cf6; --blue-soft:#e9efff; --green:#22c55e; --green-soft:#e7f9ee; --amber:#f59e0b; --amber-soft:#fff4e0;
+    --red:#ef4444; --red-soft:#ffecec; --violet:#8b5cf6; --violet-soft:#f1ecff; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html { scroll-behavior:smooth; }
+  body { font-family:"Plus Jakarta Sans",system-ui,sans-serif; background:var(--bg); color:var(--text); font-size:16px; line-height:1.6; }
+  .layout { display:grid; grid-template-columns:220px 1fr; max-width:1200px; margin:0 auto; gap:40px; padding:32px 24px 80px; }
+  nav.toc { position:sticky; top:24px; align-self:start; font-size:.84rem; display:grid; gap:2px; }
+  nav.toc a { color:var(--muted); text-decoration:none; padding:6px 10px; border-radius:8px; }
+  nav.toc a:hover { background:var(--soft); color:var(--ink); }
+  nav.toc b { color:var(--ink); padding:6px 10px; font-size:.74rem; letter-spacing:.1em; text-transform:uppercase; }
+  main { min-width:0; }
+  h1 { font-size:2.1rem; font-weight:800; line-height:1.1; color:var(--ink); letter-spacing:-.02em; }
+  h2 { font-size:1.35rem; font-weight:800; color:var(--ink); margin-bottom:6px; letter-spacing:-.01em; }
+  h3 { font-size:1rem; font-weight:700; color:var(--ink); margin:18px 0 6px; }
+  section { margin-top:52px; scroll-margin-top:24px; }
+  .sub { color:var(--muted); margin-bottom:18px; }
+  p { margin-bottom:10px; }
+  ul, ol { padding-left:22px; margin-bottom:10px; }
+  li { margin-bottom:4px; }
+  code { font-family:ui-monospace,Menlo,monospace; font-size:.84em; background:var(--soft); padding:2px 6px; border-radius:5px; }
+  .meta { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:18px; }
+  .meta div { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .meta span { display:block; font-size:.72rem; color:var(--muted); font-weight:600; }
+  .meta b { color:var(--ink); }
+  .tag { display:inline-block; font-size:.7rem; font-weight:700; padding:3px 10px; border-radius:999px; white-space:nowrap; }
+  .t-blue{background:var(--blue-soft);color:var(--blue)} .t-green{background:var(--green-soft);color:#15803d}
+  .t-amber{background:var(--amber-soft);color:#b45309} .t-red{background:var(--red-soft);color:#b91c1c} .t-violet{background:var(--violet-soft);color:#6d28d9}
+  .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; }
+  .card h4 { font-size:.95rem; color:var(--ink); margin-bottom:4px; }
+  .card p { font-size:.88rem; color:var(--muted); margin:0; }
+  .tbl { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:14px; margin:10px 0 16px; }
+  table { width:100%; border-collapse:collapse; font-size:.86rem; min-width:640px; }
+  th { text-align:left; font-size:.72rem; color:var(--muted); padding:10px 12px; border-bottom:1px solid var(--line); background:var(--soft); }
+  td { padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  tr:last-child td { border-bottom:0; }
+  td b { color:var(--ink); }
+  .story { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--blue); border-radius:12px; padding:12px 16px; margin-bottom:8px; font-size:.92rem; }
+  .story b { color:var(--ink); }
+  .story small { display:block; color:var(--muted); font-size:.8rem; margin-top:2px; }
+  .flow { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; align-items:stretch; }
+  .flow div { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; font-size:.84rem; }
+  .flow b { display:block; color:var(--ink); margin-bottom:3px; }
+  .flow i { display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--green); color:#fff; font-style:normal; font-size:.7rem; margin-bottom:6px; }
+  .chat { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; max-width:380px; display:grid; gap:8px; margin:12px 0; }
+  .msg { max-width:88%; padding:8px 12px; border-radius:12px; font-size:.82rem; background:var(--soft); }
+  .msg.me { margin-left:auto; background:var(--green-soft); }
+  .msg small { display:block; font-size:.66rem; color:var(--muted); margin-top:3px; }
+  .warn { background:var(--amber-soft); border-radius:12px; padding:14px 16px; font-size:.9rem; margin:12px 0; }
+  .ok { background:var(--green-soft); border-radius:12px; padding:14px 16px; font-size:.9rem; margin:12px 0; }
+  .schema { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .ent { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; font-size:.8rem; }
+  .ent b { display:block; color:var(--ink); font-size:.9rem; margin-bottom:6px; font-family:ui-monospace,Menlo,monospace; }
+  .ent span { display:block; color:var(--muted); font-family:ui-monospace,Menlo,monospace; font-size:.74rem; line-height:1.5; }
+  .phase { display:grid; grid-template-columns:90px 1fr 110px; gap:14px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 16px; margin-bottom:8px; align-items:center; font-size:.9rem; }
+  .phase b { color:var(--ink); }
+  .phase em { font-style:normal; color:var(--blue); font-weight:700; font-size:.8rem; text-align:right; }
+  .open { display:grid; gap:8px; }
+  .open div { display:grid; grid-template-columns:28px 1fr; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; font-size:.9rem; }
+  .open i { width:28px; height:28px; border-radius:8px; background:var(--amber-soft); color:#b45309; display:grid; place-items:center; font-style:normal; font-weight:800; font-size:.8rem; }
+  @media (max-width:900px) { .layout { grid-template-columns:1fr; } nav.toc { display:none; } .meta,.cards,.schema { grid-template-columns:1fr 1fr; } .flow { grid-template-columns:1fr; } .phase { grid-template-columns:1fr; } .phase em { text-align:left; } }
+  @media (max-width:520px) { .meta,.cards,.schema { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc">
+  <b>Daftar isi</b>
+  <a href="#ringkasan">1. Ringkasan</a>
+  <a href="#tujuan">2. Tujuan & ukuran sukses</a>
+  <a href="#pengguna">3. Pengguna</a>
+  <a href="#lingkup">4. Lingkup</a>
+  <a href="#modul">5. Modul & fitur</a>
+  <a href="#wa">6. Agent WhatsApp</a>
+  <a href="#ai">7. Lapisan AI</a>
+  <a href="#data">8. Model data</a>
+  <a href="#teknis">9. Arsitektur teknis</a>
+  <a href="#nonfungsional">10. Non-fungsional</a>
+  <a href="#tahapan">11. Tahapan</a>
+  <a href="#terbuka">12. Hal terbuka</a>
+</nav>
+
+<main>
+  <span class="tag t-blue">PRD · v1.0 · 20 September 2026</span>
+  <h1 style="margin-top:10px">Sistem Administrasi TK Permata Indonesia</h1>
+  <p class="sub" style="margin-top:8px">Aplikasi web untuk tata usaha: data siswa, tagihan SPP, kas sekolah, dan agent WhatsApp yang mengingatkan, menjawab, serta menerima bukti pembayaran dari orang tua.</p>
+  <div class="meta">
+    <div><span>Klien</span><b>TK Permata Indonesia</b></div>
+    <div><span>Pengembang</span><b>Willie Putra</b></div>
+    <div><span>Skala</span><b>±50 siswa · KB, TK A, TK B</b></div>
+    <div><span>Status</span><b>Draf untuk disetujui</b></div>
+  </div>
+
+  <!-- 1 -->
+  <section id="ringkasan">
+    <h2>1. Ringkasan</h2>
+    <p>Saat ini TU mencatat siswa dan pembayaran di Excel, mengingatkan orang tua satu per satu lewat WhatsApp, dan mencocokkan bukti transfer secara manual. Sistem ini memindahkan seluruh proses itu ke satu aplikasi web, lalu menambahkan agent WhatsApp yang bekerja di nomor sekolah yang sudah ada.</p>
+    <div class="cards">
+      <div class="card"><h4>Masalah</h4><p>Pengingat manual memakan waktu, tunggakan sulit dipantau, riwayat bayar tersebar di chat dan Excel.</p></div>
+      <div class="card"><h4>Solusi</h4><p>Satu aplikasi dengan tagihan otomatis per kelas, kas terpusat, dan bot WA yang mengingatkan serta menjawab pertanyaan pembayaran.</p></div>
+      <div class="card"><h4>Batasan</h4><p>Server 2 GB RAM tanpa Docker. Baileys bukan API resmi WhatsApp. AI memakai tier gratis dengan kuota harian.</p></div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="tujuan">
+    <h2>2. Tujuan dan ukuran sukses</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Tujuan</th><th>Ukuran</th><th>Target setelah 1 siklus SPP</th></tr></thead>
+      <tbody>
+        <tr><td>Pengingat tidak lagi manual</td><td>Persentase pengingat terkirim otomatis</td><td>100% siswa aktif yang belum bayar menerima pengingat tanpa TU mengetik</td></tr>
+        <tr><td>Tunggakan terlihat</td><td>Waktu TU mengetahui siapa yang belum bayar</td><td>Dari membuka Excel dan mencocokkan chat, menjadi 1 layar dashboard</td></tr>
+        <tr><td>Bukti transfer tidak hilang</td><td>Bukti tersimpan dan terhubung ke siswa</td><td>Setiap bukti masuk WA otomatis tercatat "menunggu verifikasi"</td></tr>
+        <tr><td>Pertanyaan rutin dijawab bot</td><td>Rasio pesan dijawab bot vs diteruskan ke TU</td><td>Minimal 60% pesan soal tagihan dan rekening dijawab tanpa TU</td></tr>
+        <tr><td>Nomor sekolah aman</td><td>Insiden pembatasan akun WhatsApp</td><td>0 insiden</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- 3 -->
+  <section id="pengguna">
+    <h2>3. Pengguna dan hak akses</h2>
+    <div class="tbl"><table>
+      <thead><tr><th>Peran</th><th>Siapa</th><th>Bisa</th><th>Tidak bisa</th></tr></thead>
+      <tbody>
+        <tr><td><b>Admin</b></td><td>TU (1 orang), pemegang HP sekolah</td><td>Semua: siswa, tagihan, catat bayar, verifikasi bukti, kas, WA, pengaturan, impor, ekspor</td><td>Menghapus log audit</td></tr>
+        <tr><td><b>Viewer</b></td><td>Kepala sekolah</td><td>Dashboard, laporan SPP, buku kas, unduh Excel/PDF</td><td>Input atau mengubah data, mengirim WA</td></tr>
+        <tr><td><b>Pengembang</b></td><td>Willie</td><td>Akses server, backup, pembaruan, membuat akun</td><td>Bukan peran di aplikasi</td></tr>
+        <tr><td><b>Orang tua</b></td><td>Wali dari ±50 siswa</td><td>Berinteraksi lewat WhatsApp saja</td><td>Tidak punya login</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Cerita pengguna utama</h3>
+    <div class="story"><b>Sebagai TU</b>, saya ingin tagihan SPP semua siswa aktif dibuat otomatis tiap awal bulan sesuai tarif kelasnya, supaya saya tidak mengetik ulang.<small>Modul Tagihan</small></div>
+    <div class="story"><b>Sebagai TU</b>, saya ingin melihat foto bukti transfer yang dikirim orang tua di aplikasi, mencocokkannya dengan mutasi bank, lalu mencentang lunas, supaya orang tua langsung dapat konfirmasi.<small>Modul Verifikasi + Agent WA</small></div>
+    <div class="story"><b>Sebagai TU</b>, saya ingin pesan orang tua yang tidak bisa dijawab bot muncul di satu inbox dengan label "perlu dibalas", supaya tidak ada yang terlewat.<small>Modul Inbox</small></div>
+    <div class="story"><b>Sebagai kepala sekolah</b>, saya ingin melihat rekap lunas, belum bayar, dan tunggakan per kelas per bulan, serta mengunduhnya sebagai PDF untuk yayasan.<small>Modul Laporan</small></div>
+    <div class="story"><b>Sebagai orang tua</b>, saya ingin bertanya "tagihan anak saya berapa" lewat WA kapan saja dan dijawab dengan angka yang benar.<small>Bot aturan</small></div>
+    <div class="story"><b>Sebagai TU</b>, saya ingin mengimpor data siswa dari Excel yang sudah ada tanpa mengetik ulang.<small>Modul Impor</small></div>
+  </section>
+
+  <!-- 4 -->
+  <section id="lingkup">
+    <h2>4. Lingkup</h2>
+    <div class="cards">
+      <div class="card"><span class="tag t-green">Termasuk v1</span>
+        <ul style="margin-top:8px;font-size:.88rem">
+          <li>Data siswa dan orang tua, status aktif/nonaktif/lulus</li>
+          <li>Tarif SPP per kelas, tagihan bulanan otomatis</li>
+          <li>Catat pembayaran: transfer (verifikasi bukti) dan tunai</li>
+          <li>Kwitansi PDF per pembayaran, dikirim via WA</li>
+          <li>Buku kas masuk/keluar dengan kategori</li>
+          <li>Laporan SPP dan kas, ekspor Excel dan PDF</li>
+          <li>Impor siswa dari Excel/CSV</li>
+          <li>Agent WA: pengingat, bot aturan, terima bukti, inbox</li>
+          <li>AI gratis untuk pesan di luar aturan</li>
+          <li>Login admin dan viewer, log audit</li>
+          <li>Backup otomatis harian</li>
+        </ul>
+      </div>
+      <div class="card"><span class="tag t-amber">Nanti (v2)</span>
+        <ul style="margin-top:8px;font-size:.88rem">
+          <li>Biaya selain SPP (uang pangkal, seragam, kegiatan)</li>
+          <li>Payment gateway / QRIS dinamis dengan konfirmasi otomatis</li>
+          <li>OCR nominal dari foto bukti</li>
+          <li>Tahun ajaran dan kenaikan kelas otomatis</li>
+          <li>Broadcast pengumuman sekolah</li>
+          <li>Portal orang tua (lihat riwayat sendiri)</li>
+          <li>Akses guru kelas</li>
+        </ul>
+      </div>
+      <div class="card"><span class="tag t-red">Tidak termasuk</span>
+        <ul style="margin-top:8px;font-size:.88rem">
+          <li>Penggajian dan absensi guru</li>
+          <li>Nilai, rapor, kurikulum</li>
+          <li>PPDB online</li>
+          <li>Multi-sekolah dalam satu instalasi</li>
+          <li>Aplikasi mobile native</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="modul">
+    <h2>5. Modul dan fitur</h2>
+
+    <h3>5.1 Dashboard</h3>
+    <ul>
+      <li>Kartu angka bulan berjalan: siswa aktif, sudah bayar, belum bayar (jumlah dan rupiah), saldo kas.</li>
+      <li>Grafik uang masuk 6 bulan terakhir per kelas.</li>
+      <li>Ringkasan WA hari ini: pengingat terkirim, dibaca, bukti masuk menunggu verifikasi, pesan perlu dibalas.</li>
+      <li>Status koneksi WA (terhubung / putus) dengan tombol scan ulang.</li>
+    </ul>
+
+    <h3>5.2 Data siswa</h3>
+    <ul>
+      <li>Field: NIS (otomatis), nama, tanggal lahir, jenis kelamin, kelas (KB / TK A / TK B), tanggal masuk, status, catatan.</li>
+      <li>Orang tua: nama ayah, nama ibu, nomor WA utama (wajib, format 62xxx), nomor WA kedua (opsional), alamat.</li>
+      <li>Satu orang tua bisa punya lebih dari satu anak; bot mengenali semua anak dari satu nomor.</li>
+      <li>Status <b>aktif</b> membuat tagihan bulanan. <b>Nonaktif</b> dan <b>lulus</b> menghentikan tagihan sejak bulan berikutnya; tagihan lama tetap ada.</li>
+      <li>Halaman detail siswa: riwayat tagihan dan pembayaran, riwayat percakapan WA.</li>
+      <li>Cari, filter kelas dan status, urut.</li>
+    </ul>
+
+    <h3>5.3 Tarif dan tagihan</h3>
+    <ul>
+      <li>Tabel tarif SPP per kelas, berlaku sejak bulan tertentu, riwayat perubahan tarif tersimpan.</li>
+      <li>Setiap tanggal 1 pukul 00.05, sistem membuat tagihan bulan itu untuk semua siswa aktif sesuai tarif kelasnya. Bisa dijalankan manual dan tidak menggandakan tagihan yang sudah ada.</li>
+      <li>TU bisa mengubah nominal satu tagihan (keringanan) dengan alasan wajib diisi, tercatat di audit.</li>
+      <li>Pengaturan jatuh tempo: tanggal jatuh tempo bulanan dan jadwal pengingat, bisa diubah TU. Nilai awal: tanggal 10, pengingat tanggal 1 dan 10, lalu tiap 7 hari sampai lunas. Tanpa denda.</li>
+      <li>Status tagihan: <code>belum</code>, <code>menunggu_verifikasi</code>, <code>lunas</code>, <code>dibatalkan</code>.</li>
+    </ul>
+
+    <h3>5.4 Pembayaran dan verifikasi</h3>
+    <div class="flow">
+      <div><i>1</i><b>Bukti masuk</b>Orang tua kirim foto ke WA sekolah. Bot simpan gambar, tautkan ke siswa dari nomor pengirim, ubah tagihan ke <code>menunggu_verifikasi</code>.</div>
+      <div><i>2</i><b>Balasan bot</b>"Bukti diterima, TU akan verifikasi maksimal 1×24 jam." TU mendapat notifikasi di dashboard.</div>
+      <div><i>3</i><b>TU verifikasi</b>Lihat foto, cek mutasi rekening, isi tanggal bayar dan nominal, klik <b>Terima</b> atau <b>Tolak</b> dengan alasan.</div>
+      <div><i>4</i><b>Lunas</b>Tagihan jadi <code>lunas</code>, kas bertambah otomatis, kwitansi PDF dibuat dan dikirim ke WA orang tua.</div>
+      <div><i>5</i><b>Ditolak</b>Bot mengirim alasan ke orang tua dan meminta bukti ulang. Tagihan kembali <code>belum</code>.</div>
+    </div>
+    <ul style="margin-top:12px">
+      <li>Pembayaran tunai: TU catat langsung dari halaman tagihan, kwitansi tercetak dan terkirim ke WA.</li>
+      <li>Jika satu nomor punya dua anak dan bukti tidak menyebut nama, tagihan masuk antrean verifikasi tanpa ditautkan; TU memilih siswanya.</li>
+      <li>Kwitansi: kop sekolah, nomor kwitansi urut, nama siswa, bulan, nominal, tanggal, nama TU, tanda "lunas".</li>
+    </ul>
+
+    <h3>5.5 Buku kas</h3>
+    <ul>
+      <li>Pemasukan dari SPP tercatat otomatis saat tagihan lunas. Pemasukan lain diinput manual.</li>
+      <li>Kategori awal pengeluaran: <b>Gaji guru dan staf</b>, <b>Operasional</b> (listrik, air, internet, sewa). Kategori bisa ditambah TU.</li>
+      <li>Setiap transaksi: tanggal, keterangan, kategori, nominal, lampiran nota (opsional), dicatat oleh siapa.</li>
+      <li>Saldo berjalan, filter per bulan dan kategori.</li>
+    </ul>
+
+    <h3>5.6 Laporan</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Laporan</th><th>Isi</th><th>Format</th></tr></thead>
+      <tbody>
+        <tr><td><b>Rekap SPP bulanan</b></td><td>Per kelas: jumlah siswa, lunas, belum, menunggu verifikasi, total rupiah masuk dan tertunggak. Daftar nama yang belum bayar.</td><td>Layar, Excel, PDF</td></tr>
+        <tr><td><b>Tunggakan</b></td><td>Siswa dengan tagihan belum lunas lebih dari 1 bulan, berapa bulan, total.</td><td>Layar, Excel, PDF</td></tr>
+        <tr><td><b>Buku kas</b></td><td>Semua transaksi dalam rentang tanggal, subtotal per kategori, saldo awal dan akhir.</td><td>Layar, Excel, PDF</td></tr>
+        <tr><td><b>Kwitansi</b></td><td>Satu pembayaran.</td><td>PDF, dikirim WA</td></tr>
+        <tr><td><b>Log WA</b></td><td>Semua pesan keluar dan masuk dengan status.</td><td>Layar, Excel</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>5.7 Impor data</h3>
+    <ul>
+      <li>Unggah .xlsx atau .csv (ekspor Google Sheets). Sistem membaca baris pertama sebagai judul kolom.</li>
+      <li>Langkah: unggah, cocokkan kolom ke field sistem (nama siswa, kelas, nama orang tua, nomor WA, tanggal lahir, dst.), pratinjau dengan tanda baris bermasalah, simpan.</li>
+      <li>Nomor WA dinormalisasi ke 62xxx. Siswa dengan nama dan tanggal lahir sama tidak digandakan, hanya diperbarui.</li>
+      <li>Format kolom final disesuaikan setelah file Excel dari TK diterima.</li>
+    </ul>
+
+    <h3>5.8 Pengaturan dan keamanan</h3>
+    <ul>
+      <li>Profil sekolah: nama, alamat, telepon, rekening bank (nama bank, nomor, atas nama), logo untuk kwitansi.</li>
+      <li>Template pesan WA yang bisa diedit TU dengan variabel <code>{orang_tua}</code>, <code>{nama_siswa}</code>, <code>{bulan}</code>, <code>{nominal}</code>, <code>{rekening}</code>.</li>
+      <li>Login email dan password, sesi 8 jam, batas percobaan gagal. Viewer dan admin dibuat oleh pengembang, TU bisa ganti password sendiri.</li>
+      <li>Log audit: siapa mengubah apa dan kapan untuk tagihan, pembayaran, kas, tarif, pengaturan.</li>
+    </ul>
+  </section>
+
+  <!-- 6 -->
+  <section id="wa">
+    <h2>6. Agent WhatsApp</h2>
+    <p class="sub">Berjalan di nomor sekolah yang sudah ada dan dipegang TU. Bot dan TU berbagi nomor yang sama.</p>
+
+    <h3>6.1 Koneksi</h3>
+    <ul>
+      <li>Library Baileys, dipasang sebagai perangkat tertaut. TU scan QR dari halaman Pengaturan WA di aplikasi, sekali saja.</li>
+      <li>HP sekolah tetap bisa dipakai TU untuk chat manual. Bot tidak menghapus atau mengubah chat di HP.</li>
+      <li>Sesi tersimpan di server. Jika putus, agent mencoba sambung ulang otomatis; jika gagal lebih dari 10 menit, dashboard menampilkan peringatan dan TU diminta scan ulang.</li>
+    </ul>
+
+    <h3>6.2 Aturan berbagi nomor dengan TU</h3>
+    <ul>
+      <li>Bot hanya membalas otomatis jika pesan cocok aturan (6.4) atau AI yakin (bab 7). Selain itu bot diam dan menandai pesan "perlu dibalas".</li>
+      <li>Jika TU membalas manual dari HP dalam 10 menit setelah pesan masuk, bot membatalkan balasan otomatis yang belum terkirim untuk percakapan itu.</li>
+      <li>Setiap pesan keluar dari bot diakhiri tanda kecil, misalnya "— Asisten TK", supaya orang tua tahu itu otomatis.</li>
+      <li>Tombol <b>Jeda bot</b> di dashboard menghentikan semua balasan dan pengingat otomatis seketika.</li>
+    </ul>
+
+    <h3>6.3 Pengingat terjadwal</h3>
+    <ul>
+      <li>Dikirim hanya pukul 07.00 sampai 09.00, Senin sampai Sabtu. Jika jadwal jatuh pada hari libur nasional atau Minggu, digeser ke hari kerja berikutnya.</li>
+      <li>Penerima: nomor WA utama dari siswa aktif yang tagihannya <code>belum</code>. Satu nomor dengan dua anak menerima satu pesan yang menyebut kedua anak.</li>
+      <li>Jeda acak 20 sampai 40 detik antar pesan, maksimal 50 pesan per jam.</li>
+      <li>Tidak ada pengingat ke nomor yang tidak pernah membalas atau menyimpan nomor sekolah dalam 90 hari terakhir; TU ditandai untuk menghubungi manual.</li>
+    </ul>
+
+    <h3>6.4 Bot aturan (tanpa AI)</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Niat</th><th>Kata kunci contoh</th><th>Jawaban bot</th></tr></thead>
+      <tbody>
+        <tr><td><b>Cek tagihan</b></td><td>tagihan, berapa, spp, belum bayar, bulan ini</td><td>Daftar tagihan belum lunas semua anak dari nomor itu, nominal, jatuh tempo, rekening</td></tr>
+        <tr><td><b>Rekening</b></td><td>rekening, transfer ke mana, nomor rek, bank</td><td>Bank, nomor rekening, atas nama</td></tr>
+        <tr><td><b>Riwayat</b></td><td>sudah bayar, riwayat, bulan lalu, lunas</td><td>3 pembayaran terakhir per anak dengan tanggal</td></tr>
+        <tr><td><b>Bukti transfer</b></td><td>pesan berisi gambar atau PDF</td><td>Simpan, tandai menunggu verifikasi, balas konfirmasi terima</td></tr>
+        <tr><td><b>Kwitansi</b></td><td>kwitansi, bukti lunas, struk</td><td>Kirim ulang PDF kwitansi pembayaran terakhir</td></tr>
+        <tr><td><b>Sapaan</b></td><td>assalamualaikum, halo, pagi</td><td>Salam balik dan menu singkat: ketik <i>tagihan</i>, <i>rekening</i>, atau <i>riwayat</i></td></tr>
+        <tr><td><b>Nomor tidak dikenal</b></td><td>apa pun</td><td>Tidak dibalas otomatis, masuk inbox "perlu dibalas"</td></tr>
+        <tr><td><b>Lainnya</b></td><td>tidak cocok aturan</td><td>Diteruskan ke lapisan AI (bab 7); jika AI tidak yakin, masuk inbox</td></tr>
+      </tbody>
+    </table></div>
+    <div class="chat">
+      <div class="msg me">Assalamualaikum, spp bima bulan ini berapa ya bu</div>
+      <div class="msg">Waalaikumsalam Bapak Hendra. Tagihan SPP <b>Bima Aditya</b> (TK A) bulan September 2026 sebesar <b>Rp 350.000</b>, jatuh tempo 10 September.<br><br>Pembayaran ke BCA 1234567890 a.n. TK Permata Indonesia. Setelah transfer, mohon kirim fotonya ke sini. Terima kasih 🙏<br><small>— Asisten TK · aturan "cek tagihan"</small></div>
+      <div class="msg me">[foto bukti transfer]</div>
+      <div class="msg">Terima kasih Bapak Hendra, bukti pembayaran sudah kami terima dan akan diverifikasi maksimal 1×24 jam.<small>— Asisten TK · tagihan → menunggu verifikasi</small></div>
+      <div class="msg">Alhamdulillah, pembayaran SPP Bima bulan September sebesar Rp 350.000 sudah kami terima. Kwitansi terlampir. Terima kasih 🙏<small>— Asisten TK · setelah TU klik Terima · PDF terlampir</small></div>
+    </div>
+
+    <h3>6.5 Gaya bahasa</h3>
+    <ul>
+      <li>Formal dengan salam Islami: membuka dengan "Assalamualaikum" atau membalas "Waalaikumsalam", menyapa "Bapak/Ibu {nama}", menutup dengan terima kasih dan 🙏.</li>
+      <li>Nominal ditulis "Rp 350.000", bulan ditulis nama bulan, tanpa singkatan.</li>
+      <li>Semua template bisa diedit TU di Pengaturan.</li>
+    </ul>
+
+    <h3>6.6 Inbox di dashboard</h3>
+    <ul>
+      <li>Daftar percakapan per nomor, urut terbaru. Label: <span class="tag t-green">dijawab bot</span> <span class="tag t-amber">perlu dibalas</span> <span class="tag t-blue">dibalas TU</span>.</li>
+      <li>TU bisa membalas dari dashboard; pesan terkirim lewat nomor sekolah dan tercatat sebagai balasan TU.</li>
+      <li>Tautan cadangan <code>wa.me</code> dengan teks terisi di setiap percakapan dan setiap tagihan, untuk saat agent putus.</li>
+    </ul>
+  </section>
+
+  <!-- 7 -->
+  <section id="ai">
+    <h2>7. Lapisan AI (gratis)</h2>
+    <p class="sub">Hanya untuk pesan yang tidak cocok aturan. Bot aturan tetap sumber jawaban angka.</p>
+    <ul>
+      <li><b>Penyedia utama:</b> Google Gemini API tier gratis (model Flash). Kuota gratis harian jauh di atas kebutuhan ±50 keluarga. <b>Cadangan:</b> Groq tier gratis. Keduanya hanya butuh API key, tanpa kartu kredit. Kunci disimpan di server, bisa diganti di Pengaturan.</li>
+      <li><b>Tugas AI:</b> mengklasifikasikan niat pesan bebas ke salah satu niat di 6.4, atau menjawab pertanyaan umum yang sudah ada di basis pengetahuan sekolah (jam masuk, libur, seragam) yang diisi TU.</li>
+      <li><b>AI tidak boleh:</b> menyebut nominal atau status bayar dari tebakan; angka selalu diambil sistem dari database. Tidak boleh menjanjikan keringanan, jadwal, atau kebijakan.</li>
+      <li><b>Ambang keyakinan:</b> jika AI tidak yakin atau pertanyaan di luar basis pengetahuan, bot tidak membalas dan pesan masuk inbox "perlu dibalas".</li>
+      <li><b>Jika kuota habis atau API gagal:</b> lapisan AI dilewati, pesan langsung ke inbox. Tidak ada pesan galat ke orang tua.</li>
+      <li><b>Privasi:</b> yang dikirim ke AI hanya teks pesan dan nama depan anak, tanpa nomor telepon, alamat, atau data keuangan.</li>
+    </ul>
+    <div class="warn">Tier gratis bisa berubah kebijakan sewaktu-waktu. Arsitektur memakai satu antarmuka penyedia sehingga berpindah ke Claude Haiku atau penyedia lain hanya mengganti konfigurasi.</div>
+  </section>
+
+  <!-- 8 -->
+  <section id="data">
+    <h2>8. Model data</h2>
+    <p class="sub">SQLite, satu file. Kolom inti saja; kolom audit (dibuat_oleh, dibuat_pada, diubah_pada) ada di semua tabel.</p>
+    <div class="schema">
+      <div class="ent"><b>siswa</b><span>id, nis, nama, tgl_lahir, jk, kelas_id, tgl_masuk, status, catatan</span></div>
+      <div class="ent"><b>orang_tua</b><span>id, nama_ayah, nama_ibu, wa_utama, wa_kedua, alamat</span></div>
+      <div class="ent"><b>siswa_orang_tua</b><span>siswa_id, orang_tua_id (satu ortu banyak anak)</span></div>
+      <div class="ent"><b>kelas</b><span>id, nama (KB/TK A/TK B), urutan</span></div>
+      <div class="ent"><b>tarif</b><span>id, kelas_id, nominal, berlaku_sejak</span></div>
+      <div class="ent"><b>tagihan</b><span>id, siswa_id, periode (YYYY-MM), nominal, jatuh_tempo, status, alasan_ubah</span></div>
+      <div class="ent"><b>pembayaran</b><span>id, tagihan_id, tgl_bayar, nominal, metode, bukti_file, status_verifikasi, alasan_tolak, no_kwitansi, diverifikasi_oleh</span></div>
+      <div class="ent"><b>kas</b><span>id, tgl, jenis (masuk/keluar), kategori_id, keterangan, nominal, lampiran, pembayaran_id?</span></div>
+      <div class="ent"><b>kas_kategori</b><span>id, nama, jenis</span></div>
+      <div class="ent"><b>wa_pesan</b><span>id, arah (masuk/keluar), nomor, orang_tua_id?, isi, media_file, wa_msg_id, status (antre/terkirim/dibaca/gagal), sumber (bot/ai/tu/pengingat), niat, dibaca_tu</span></div>
+      <div class="ent"><b>wa_jadwal</b><span>id, jenis, aturan (tgl/hari), jam_mulai, jam_selesai, aktif</span></div>
+      <div class="ent"><b>pengetahuan</b><span>id, pertanyaan, jawaban (untuk AI)</span></div>
+      <div class="ent"><b>pengguna</b><span>id, nama, email, password_hash, peran, aktif</span></div>
+      <div class="ent"><b>pengaturan</b><span>kunci, nilai (profil sekolah, rekening, template, jatuh tempo, api key)</span></div>
+      <div class="ent"><b>audit</b><span>id, pengguna_id, tabel, baris_id, aksi, sebelum, sesudah, waktu</span></div>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section id="teknis">
+    <h2>9. Arsitektur teknis</h2>
+    <div class="cards">
+      <div class="card"><h4>Aplikasi web</h4><p>Next.js (App Router) + TypeScript, Tailwind. UI mengikuti mockup yang disetujui: tema terang, Plus Jakarta Sans. Berjalan sebagai proses Node di port internal.</p></div>
+      <div class="card"><h4>Agent WA</h4><p>Proses Node terpisah dengan Baileys. Membaca antrean <code>wa_pesan</code> status antre, mengirim dengan jeda, menulis pesan masuk. Pola reconnect dan anti-ban mengikuti WA-AKG.</p></div>
+      <div class="card"><h4>Database</h4><p>SQLite via Prisma, satu file di <code>/opt/tk/data</code>. Media (bukti, kwitansi) di folder terpisah, dirujuk dari database.</p></div>
+      <div class="card"><h4>Penjadwal</h4><p>node-cron di dalam agent: buat tagihan (tgl 1), pengingat (sesuai pengaturan), backup (02.00).</p></div>
+      <div class="card"><h4>Hosting</h4><p>Server yang ada (Ubuntu 22.04, 2 GB RAM). Kedua proses dijalankan lewat cron @reboot seperti projectreact, akses publik lewat Cloudflare Tunnel dengan HTTPS.</p></div>
+      <div class="card"><h4>Domain</h4><p>Subdomain milik sekolah, ditentukan menyusul (lihat Hal terbuka). Sementara memakai <code>tk.willieputra.dev</code> untuk pengembangan.</p></div>
+    </div>
+    <h3>Perkiraan beban server</h3>
+    <div class="tbl"><table>
+      <thead><tr><th>Proses</th><th>RAM</th><th>Catatan</th></tr></thead>
+      <tbody>
+        <tr><td>Next.js (production)</td><td>±150–250 MB</td><td>Server-rendered, tanpa build ulang saat jalan</td></tr>
+        <tr><td>Agent Baileys</td><td>±80–120 MB</td><td>Tanpa browser</td></tr>
+        <tr><td>SQLite</td><td>Ikut proses</td><td>Tidak ada server database terpisah</td></tr>
+        <tr><td><b>Total</b></td><td><b>±300–400 MB</b></td><td>Masih menyisakan ruang di samping nginx, cloudflared, dan projectreact</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- 10 -->
+  <section id="nonfungsional">
+    <h2>10. Kebutuhan non-fungsional</h2>
+    <div class="tbl"><table>
+      <tbody>
+        <tr><td><b>Keamanan</b></td><td>HTTPS via Cloudflare. Password di-hash. Hanya admin bisa mengubah data. File bukti tidak bisa diakses tanpa login. API key AI tidak pernah dikirim ke browser.</td></tr>
+        <tr><td><b>Backup</b></td><td>Setiap 02.00: salin SQLite dan folder media ke <code>/opt/tk/backup</code>, simpan 30 hari, lalu sinkron ke luar server (Mac pengembang atau penyimpanan cloud, ditentukan). Pemulihan diuji sebelum go-live.</td></tr>
+        <tr><td><b>Ketersediaan</b></td><td>Proses hidup kembali otomatis setelah reboot. Jika agent WA mati, aplikasi tetap jalan dan tombol wa.me tetap bisa dipakai.</td></tr>
+        <tr><td><b>Kinerja</b></td><td>Semua halaman untuk ±50 siswa terbuka di bawah 1 detik. Laporan PDF terbentuk di bawah 5 detik.</td></tr>
+        <tr><td><b>Perangkat</b></td><td>Laptop TU (Chrome/Edge) dan HP (Safari/Chrome). Tampilan responsif mengikuti mockup.</td></tr>
+        <tr><td><b>Bahasa</b></td><td>Seluruh antarmuka Bahasa Indonesia.</td></tr>
+        <tr><td><b>Kepatuhan WhatsApp</b></td><td>Baileys tidak resmi. Mitigasi: hanya kirim ke kontak dikenal, jeda acak, batas per jam, jeda bot, cadangan wa.me. Jalur migrasi ke WhatsApp Cloud API disiapkan lewat antarmuka pengirim yang bisa diganti.</td></tr>
+        <tr><td><b>Privasi</b></td><td>Data anak dan orang tua hanya di server sekolah dan backup. Ke AI hanya teks pesan dan nama depan.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- 11 -->
+  <section id="tahapan">
+    <h2>11. Tahapan pengerjaan</h2>
+    <div class="phase"><b>Tahap 1</b><span>Fondasi: login, profil sekolah, kelas dan tarif, data siswa dan orang tua, impor Excel, tagihan otomatis, catat bayar tunai, kwitansi PDF.</span><em>Minggu 1–2</em></div>
+    <div class="phase"><b>Tahap 2</b><span>Kas dan laporan: buku kas, kategori, rekap SPP, tunggakan, ekspor Excel/PDF, dashboard, akun viewer, audit, backup.</span><em>Minggu 3</em></div>
+    <div class="phase"><b>Tahap 3</b><span>Agent WA: koneksi Baileys, QR di dashboard, antrean kirim, pesan masuk, inbox, tombol jeda, pengingat terjadwal, template pesan.</span><em>Minggu 4</em></div>
+    <div class="phase"><b>Tahap 4</b><span>Bot aturan dan verifikasi: niat kata kunci, terima bukti, alur verifikasi TU, konfirmasi dan kwitansi via WA, lapisan AI gratis, basis pengetahuan.</span><em>Minggu 5</em></div>
+    <div class="phase"><b>Tahap 5</b><span>Uji coba: impor data asli, pemanasan bot di nomor sekolah dengan pengingat ke 5 keluarga dulu, lalu semua. Pendampingan TU satu siklus SPP, perbaikan.</span><em>Minggu 6–9</em></div>
+    <div class="ok">Setiap tahap diakhiri demo ke TU dan kepala sekolah di alamat pengembangan, dan baru lanjut setelah disetujui.</div>
+  </section>
+
+  <!-- 12 -->
+  <section id="terbuka">
+    <h2>12. Hal yang masih terbuka</h2>
+    <div class="open">
+      <div><i>1</i><span><b>Nama subdomain sekolah.</b> Anda memilih domain sekolah, tapi nama dan siapa pemilik domainnya belum ada. Perlu: nama domain dan akses DNS, atau sekolah membeli domain baru.</span></div>
+      <div><i>2</i><span><b>Tarif SPP per kelas.</b> Nominal KB, TK A, TK B belum diketahui. Dibutuhkan sebelum tahap 1 selesai; sementara memakai angka contoh.</span></div>
+      <div><i>3</i><span><b>Kebijakan jatuh tempo.</b> Default tanggal 10 dan pengingat tanggal 1, 10, lalu mingguan. Sekolah mengonfirmasi atau mengubah di Pengaturan.</span></div>
+      <div><i>4</i><span><b>File Excel TU.</b> Format impor final menunggu file dikirim.</span></div>
+      <div><i>5</i><span><b>Rekening dan kop sekolah.</b> Nama bank, nomor rekening, atas nama, logo, alamat, dan nama kepala sekolah untuk kwitansi.</span></div>
+      <div><i>6</i><span><b>Basis pengetahuan AI.</b> Daftar pertanyaan umum orang tua dan jawabannya (jam masuk, libur, seragam) diisi TU sebelum tahap 4.</span></div>
+      <div><i>7</i><span><b>Tujuan backup luar server.</b> Mac pengembang, Google Drive, atau lainnya.</span></div>
+      <div><i>8</i><span><b>Akun AI.</b> API key Gemini (dan Groq sebagai cadangan) dibuat atas nama sekolah atau pengembang.</span></div>
+    </div>
+  </section>
+
+</main>
+</div>
+</body>
+</html>

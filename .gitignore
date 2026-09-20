@@ -1,0 +1,16 @@
+node_modules/
+.next/
+*.log
+.env
+.env.local
+agent/auth/
+agent/node_modules/
+web/node_modules/
+web/.next/
+web/prisma/*.db
+web/prisma/*.db-journal
+data/*.db
+data/media/*
+data/backup/*
+!data/.gitkeep
+.DS_Store

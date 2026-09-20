@@ -1,0 +1,185 @@
+// PRD §8 — SQLite, satu file. Semua tabel punya audit dibuat_oleh/dibuat_pada/diubah_pada.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Kelas {
+  id      Int     @id @default(autoincrement())
+  nama    String  @unique // KB / TK A / TK B
+  urutan  Int     @default(0)
+  siswa   Siswa[]
+  tarif   Tarif[]
+  dibuat_oleh String? @default("seed")
+  dibuat_pada DateTime @default(now())
+  diubah_pada DateTime @updatedAt
+}
+
+model Tarif {
+  id            Int      @id @default(autoincrement())
+  kelas_id      Int
+  kelas         Kelas    @relation(fields: [kelas_id], references: [id])
+  nominal       Int
+  berlaku_sejak String   // YYYY-MM
+  dibuat_oleh String? @default("seed")
+  dibuat_pada DateTime @default(now())
+  diubah_pada DateTime @updatedAt
+}
+
+model Siswa {
+  id         Int      @id @default(autoincrement())
+  nis        String   @unique
+  nama       String
+  tgl_lahir  String?
+  jk         String?  // L / P
+  kelas_id   Int
+  kelas      Kelas    @relation(fields: [kelas_id], references: [id])
+  tgl_masuk  String?
+  status     String   @default("aktif") // aktif / nonaktif / lulus
+  catatan    String?
+  orang_tua  SiswaOrangTua[]
+  tagihan    Tagihan[]
+  dibuat_oleh String? @default("seed")
+  dibuat_pada DateTime @default(now())
+  diubah_pada DateTime @updatedAt
+}
+
+model OrangTua {
+  id        Int      @id @default(autoincrement())
+  nama_ayah String?
+  nama_ibu  String?
+  wa_utama  String   // 62xxx wajib
+  wa_kedua  String?
+  alamat    String?
+  anak      SiswaOrangTua[]
+  wa_pesan  WaPesan[]
+  dibuat_oleh String? @default("seed")
+  dibuat_pada DateTime @default(now())
+  diubah_pada DateTime @updatedAt
+}
+
+model SiswaOrangTua {
+  siswa_id    Int
+  orang_tua_id Int
+  siswa    Siswa    @relation(fields: [siswa_id], references: [id], onDelete: Cascade)
+  orang_tua OrangTua @relation(fields: [orang_tua_id], references: [id], onDelete: Cascade)
+  @@id([siswa_id, orang_tua_id])
+}
+
+model Tagihan {
+  id          Int      @id @default(autoincrement())
+  siswa_id    Int
+  siswa       Siswa    @relation(fields: [siswa_id], references: [id], onDelete: Cascade)
+  periode     String   // YYYY-MM
+  nominal     Int
+  jatuh_tempo String   // YYYY-MM-DD
+  status      String   @default("belum") // belum / menunggu_verifikasi / lunas / dibatalkan
+  alasan_ubah String?
+  pembayaran  Pembayaran[]
+  dibuat_oleh String? @default("seed")
+  dibuat_pada DateTime @default(now())
+  diubah_pada DateTime @updatedAt
+  @@unique([siswa_id, periode])
+}
+
+model Pembayaran {
+  id               Int      @id @default(autoincrement())
+  tagihan_id       Int
+  tagihan          Tagihan  @relation(fields: [tagihan_id], references: [id], onDelete: Cascade)
+  tgl_bayar        String   // YYYY-MM-DD
+  nominal          Int
+  metode           String   @default("tunai") // tunai / transfer
+  bukti_file       String?
+  status_verifikasi String  @default("lunas") // lunas / menunggu / ditolak
+  alasan_tolak     String?
+  no_kwitansi      String   @unique
+  diverifikasi_oleh String?
+  kas              Kas[]
+  dibuat_oleh String? @default("seed")
+  dibuat_pada DateTime @default(now())
+  diubah_pada DateTime @updatedAt
+}
+
+model KasKategori {
+  id    Int    @id @default(autoincrement())
+  nama  String @unique
+  jenis String // masuk / keluar
+  kas   Kas[]
+}
+
+model Kas {
+  id            Int      @id @default(autoincrement())
+  tgl           String   // YYYY-MM-DD
+  jenis         String   // masuk / keluar
+  kategori_id   Int
+  kategori      KasKategori @relation(fields: [kategori_id], references: [id])
+  keterangan    String
+  nominal       Int
+  lampiran      String?
+  pembayaran_id Int?
+  pembayaran    Pembayaran? @relation(fields: [pembayaran_id], references: [id])
+  dibuat_oleh String? @default("seed")
+  dibuat_pada DateTime @default(now())
+  diubah_pada DateTime @updatedAt
+}
+
+model WaPesan {
+  id           Int      @id @default(autoincrement())
+  arah         String   // masuk / keluar
+  nomor        String
+  orang_tua_id Int?
+  orang_tua    OrangTua? @relation(fields: [orang_tua_id], references: [id])
+  isi          String
+  media_file   String?
+  wa_msg_id    String?
+  status       String   @default("antre") // antre / terkirim / dibaca / gagal
+  sumber       String?  // bot / ai / tu / pengingat
+  niat         String?
+  dibaca_tu    Boolean  @default(false)
+  dibuat_pada  DateTime @default(now())
+}
+
+model WaJadwal {
+  id          Int     @id @default(autoincrement())
+  jenis       String  // pengingat / tagihan / backup
+  aturan      String?
+  jam_mulai   String?
+  jam_selesai String?
+  aktif       Boolean @default(true)
+}
+
+model Pengetahuan {
+  id        Int      @id @default(autoincrement())
+  pertanyaan String
+  jawaban    String
+}
+
+model Pengguna {
+  id            Int      @id @default(autoincrement())
+  nama          String
+  email         String   @unique
+  password_hash String
+  peran         String   @default("admin") // admin / viewer
+  aktif         Boolean  @default(true)
+  dibuat_pada   DateTime @default(now())
+}
+
+model Pengaturan {
+  kunci String @id
+  nilai String
+}
+
+model Audit {
+  id          Int      @id @default(autoincrement())
+  pengguna_id Int?
+  tabel       String
+  baris_id    String?
+  aksi        String
+  sebelum     String?
+  sesudah     String?
+  waktu       DateTime @default(now())
+}

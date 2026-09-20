@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #fbfbfd;
+  --ink: #16181f;
+  --muted: #6f7583;
+  --line: #e8eaf0;
+  --blue: #3b6cf6;
+  --green: #22c55e;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: "Plus Jakarta Sans", system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: #2b2f3a;
+  -webkit-font-smoothing: antialiased;
+}
