@@ -14,6 +14,10 @@ DST="$DATA/backup/$(date +%F)"
 mkdir -p "$DST"
 if command -v sqlite3 >/dev/null 2>&1; then
   sqlite3 "$DB_FILE" ".backup '$DST/tk.db'"
+elif [ -d "$APP_DIR/agent/node_modules/better-sqlite3" ] && command -v node >/dev/null 2>&1; then
+  # Tanpa sqlite3 CLI: pakai API backup better-sqlite3 (cp biasa tidak aman untuk DB mode WAL)
+  node -e 'require(process.argv[1])(process.argv[2], { readonly: true }).backup(process.argv[3]).catch((e) => { console.error(e.message); process.exit(1); })' \
+    "$APP_DIR/agent/node_modules/better-sqlite3" "$DB_FILE" "$DST/tk.db"
 else
   cp "$DB_FILE" "$DST/tk.db"
 fi

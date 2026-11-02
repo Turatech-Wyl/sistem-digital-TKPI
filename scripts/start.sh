@@ -7,7 +7,7 @@ APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 LOG_DIR="${LOG_DIR:-$APP_DIR/data/logs}"
 mkdir -p "$LOG_DIR"
 # Cron tidak memuat profil shell; muat nvm bila ada agar `npm` ditemukan
-[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
+[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" && nvm use 22 >/dev/null 2>&1
 # Tanggal kwitansi/kas dan jadwal pengingat mengikuti WIB meski server memakai UTC
 export TZ="${TZ:-Asia/Jakarta}"
 
