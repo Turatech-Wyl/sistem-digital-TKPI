@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test-wa": "tsx src/test-wa.ts",
-    "start": "tsx src/index.ts"
+    "test-wa": "tsx --env-file-if-exists=.env src/test-wa.ts",
+    "start": "tsx --env-file-if-exists=.env src/index.ts"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.24",

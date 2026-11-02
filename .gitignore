@@ -21,3 +21,5 @@ data/media/*
 data/backup/*
 !data/.gitkeep
 .DS_Store
+data/logs/*
+data/jid-balas.json
