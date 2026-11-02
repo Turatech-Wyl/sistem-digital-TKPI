@@ -168,3 +168,5 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 details.add:not([open]) { background: none; padding: 0; }
 .f2, .f3 { align-items: start; }
+.danger-zone { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; border: 1px solid var(--red-soft); }
+.danger-zone p { font-size: 0.82rem; color: var(--muted); margin-top: 4px; max-width: 640px; }

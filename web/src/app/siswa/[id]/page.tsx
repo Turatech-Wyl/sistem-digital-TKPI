@@ -65,6 +65,33 @@ async function simpanOrtu(form: FormData) {
   kembali(siswaId, "Data orang tua tersimpan ✓");
 }
 
+async function hapusSiswa(form: FormData) {
+  "use server";
+  const ss = await sesi();
+  if (!ss || ss.peran !== "admin") return;
+  const id = Number(form.get("id"));
+  const sw = await db.siswa.findUnique({ where: { id }, include: { orang_tua: true, tagihan: { select: { status: true } } } });
+  if (!sw) redirect("/siswa");
+  // Siswa yang sudah punya pembayaran tidak boleh dihapus: kwitansi dan kas akan kehilangan asalnya
+  const adaBayar = await db.pembayaran.count({ where: { tagihan: { siswa_id: id } } });
+  if (adaBayar) kembali(id, "Siswa sudah punya pembayaran — ubah status jadi Nonaktif/Lulus saja");
+  const ortuIds = sw.orang_tua.map((o) => o.orang_tua_id);
+  const ortuDihapus: number[] = [];
+  await db.$transaction(async (tx) => {
+    await tx.siswa.delete({ where: { id } }); // tagihan & tautan orang tua ikut terhapus (cascade)
+    for (const oid of ortuIds) {
+      if (await tx.siswaOrangTua.count({ where: { orang_tua_id: oid } })) continue; // masih punya anak lain
+      await tx.waPesan.updateMany({ where: { orang_tua_id: oid }, data: { orang_tua_id: null } }); // riwayat chat tetap ada
+      await tx.orangTua.delete({ where: { id: oid } });
+      ortuDihapus.push(oid);
+    }
+  });
+  await catatAudit(ss.email, "siswa", "hapus", String(id),
+    { nis: sw.nis, nama: sw.nama, kelas_id: sw.kelas_id, status: sw.status, tagihan: sw.tagihan.length, orang_tua: ortuIds },
+    { orang_tua_dihapus: ortuDihapus });
+  redirect("/siswa?toast=" + encodeURIComponent(`Siswa ${sw.nama} dihapus ✓`));
+}
+
 export default async function DetailSiswa(props: PageProps<"/siswa/[id]">) {
   const s = await sesi();
   if (!s) redirect("/login");
@@ -86,6 +113,7 @@ export default async function DetailSiswa(props: PageProps<"/siswa/[id]">) {
     ? await db.waPesan.findMany({ where: { nomor: { in: nomor } }, orderBy: { dibuat_pada: "desc" }, take: 8 })
     : [];
   const admin = s.peran === "admin";
+  const adaBayar = sw.tagihan.some((t) => t.pembayaran.length > 0);
   const tunggakan = sw.tagihan.filter((t) => t.status === "belum" || t.status === "menunggu_verifikasi");
   const jam = (d: Date) => d.toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -218,6 +246,25 @@ export default async function DetailSiswa(props: PageProps<"/siswa/[id]">) {
           )}
         </div>
       </div>
+
+      {admin && (
+        <div className="card danger-zone">
+          <div>
+            <h4 style={{ margin: 0, color: "var(--red)" }}>Hapus siswa</h4>
+            <p>
+              {adaBayar
+                ? "Siswa ini sudah punya pembayaran, jadi tidak bisa dihapus agar kwitansi dan kas tetap utuh. Ubah status menjadi Nonaktif atau Lulus."
+                : `Menghapus ${sw.nama} beserta ${sw.tagihan.length} tagihannya secara permanen. Data orang tua ikut terhapus bila tidak punya anak lain. Untuk siswa yang keluar, cukup ubah status menjadi Nonaktif.`}
+            </p>
+          </div>
+          {!adaBayar && (
+            <form action={hapusSiswa}>
+              <input type="hidden" name="id" value={sw.id} />
+              <SubmitButton className="btn danger" confirm={`Hapus ${sw.nama} secara permanen? Tindakan ini tidak bisa dibatalkan.`}>Hapus siswa</SubmitButton>
+            </form>
+          )}
+        </div>
+      )}
     </AppShell>
   );
 }
