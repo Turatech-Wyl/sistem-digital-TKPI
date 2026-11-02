@@ -162,8 +162,8 @@ Agent berjalan di nomor sekolah yang sudah ada dan dipegang TU. Bot dan TU berba
 - **Antrean:** semua pesan keluar masuk tabel `wa_pesan` berstatus `antre` dan dikirim oleh agent (dicek tiap 5 detik).
 - **Prioritas:** balasan atas chat orang tua (bot/AI/TU) didahulukan dan dikirim cepat dengan indikator "mengetik…" 2–5 detik. Pengingat dikirim terakhir.
 - **Pengingat** hanya pukul **07.00–09.00**, Senin–Sabtu, pada tanggal pengingat (§5.3). Hari libur yang diatur di Pengaturan dilewati.
-- **Penerima:** nomor WA utama milik siswa aktif dengan tagihan `belum`. Satu nomor dengan dua anak menerima satu pesan yang menyebut kedua anak.
-- **Anti-ban:** jeda acak **20–40 detik** antar pengingat, maksimal **50 pesan per jam**. Nomor yang tidak pernah membalas dalam 90 hari terakhir dilewati, dan TU ditandai untuk menghubungi secara manual.
+- **Penerima:** nomor WA utama milik siswa aktif dengan tagihan `belum`, termasuk tunggakan bulan sebelumnya. Satu nomor dengan dua anak menerima satu pesan yang menyebut kedua anak. Maksimal satu pengingat per nomor per hari.
+- **Anti-ban:** jeda acak **20–40 detik** antar pengingat, maksimal **50 pesan per jam**. Nomor yang sudah dihubungi lebih dari 90 hari lalu tetapi tidak pernah membalas sejak itu dilewati, dan TU ditandai untuk menghubungi secara manual. Nomor baru tetap dikirimi.
 - **Mode uji:** jika pengaturan `wa_uji_nomor` diisi, hanya nomor itu yang dikirimi pesan; pesan ke nomor lain ditahan di antrean. Dipakai saat pemanasan (lihat `PLAN.md`).
 
 ### 6.4 Bot aturan (tanpa AI)

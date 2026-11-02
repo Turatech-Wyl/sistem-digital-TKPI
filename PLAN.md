@@ -20,19 +20,39 @@ Status pekerjaan dan langkah menuju go-live. Spesifikasi produk ada di [`PRD.md`
 
 ## Sebelum Tahap 5: celah yang harus ditutup
 
-### A. Bug agent WA (wajib)
+### A. Bug logika (✅ diperbaiki 2 Nov 2026)
 
-- [ ] **Status/story WA ikut diproses.** `messages.upsert` belum menyaring `status@broadcast`, sehingga nomor kontak bisa terpetakan ke `status@broadcast` di `data/jid-balas.json` dan story memicu bot. Saring di `agent/src/wa.ts`, lalu bersihkan entri yang salah di `jid-balas.json`.
-- [ ] **Gambar dari nomor tak dikenal tetap dibalas.** `tanganiBukti` membalas meski nomor tidak terdaftar (melanggar PRD §6.4). Nomor tanpa anak cukup disimpan ke inbox.
-- [ ] **Keyakinan AI tidak dicek untuk niat bot.** Saat AI mengembalikan niat `tagihan`/`rekening`/…, nilai `yakin` diabaikan. Terapkan ambang 0,7 yang sama.
-- [ ] Commit perubahan agent yang masih terbuka (antrean berprioritas, peta JID `@lid`, mode uji, perbaikan URL Groq).
+Agent WA:
+- [x] Tagihan otomatis tanggal 1 dari agent tidak pernah membuat tagihan (`diubah_pada` NOT NULL tidak diisi, sehingga `INSERT OR IGNORE` diam-diam melewati semua baris).
+- [x] Pengingat diantrekan ulang tiap 10 menit (12× per orang tua pada tanggal pengingat), karena cek "sudah dikirim" mencari `2026-11` di isi pesan yang bertuliskan "November 2026".
+- [x] Aturan "tanpa balasan 90 hari" membuat pengingat pertama setelah go-live tidak terkirim ke siapa pun. Sekarang hanya nomor yang sudah lama dihubungi tetapi tidak pernah membalas yang dilewati.
+- [x] Pengingat hanya menyebut bulan berjalan; sekarang tunggakan bulan sebelumnya ikut disebut. Nomor kosong dilewati.
+- [x] Format waktu campur aduk: agent menulis TEXT, Prisma menulis epoch ms. Akibatnya "TU baru membalas dari dashboard" tidak terdeteksi, dan urutan/filter waktu di web kacau. Agent kini menulis epoch ms dan merapikan baris lama saat start.
+- [x] Antrean bisa tersumbat: 10 pesan tertahan (jeda bot/mode uji) di depan antrean menahan balasan TU di belakangnya.
+- [x] Batas 50/jam dihitung dari waktu antre, bukan waktu kirim. Sisa pengingat juga bisa terkirim di luar 07.00–09.00.
+- [x] Status/story, broadcast, dan channel WA ikut diproses; entri `status@broadcast` di `jid-balas.json` dibuang.
+- [x] Gambar dari nomor tak dikenal tetap dibalas bot.
+- [x] Keyakinan AI tidak dicek untuk niat bot.
+- [x] Zona waktu: jam pengingat dan cron mengikuti zona waktu server (UTC di VPS = 14.00 WIB). Kini `TZ=Asia/Jakarta`.
+- [x] Lampiran PDF disimpan sebagai `.jpg`; caption gambar hilang; unduh kwitansi memblokir proses (`curl` sinkron).
+
+Web:
+- [x] Pelunasan tidak atomik dan tanpa pengaman: klik ganda bisa membuat dua pembayaran + dua catatan kas. "Terima" juga bisa dipakai untuk tagihan yang sudah lunas.
+- [x] Nomor kwitansi tidak urut (6 digit terakhir timestamp, bisa bentrok). Kini `KWT/2026/11/0001`.
+- [x] Tarif: tarif yang belum berlaku ikut dipakai; siswa tanpa tarif ditagih Rp 350.000 tebakan. Header pembayaran menampilkan semua riwayat tarif.
+- [x] Tanggal bayar/kas memakai UTC (mundur sehari sebelum 07.00 WIB).
+- [x] Aksi "tandai dibaca" di inbox bisa dipanggil tanpa login.
+- [x] Celah path di `/api/media` (`../media-lain/…` lolos cek awalan).
+- [x] Sesi: perbandingan tanda tangan tidak constant-time, `SESSION_SECRET` bawaan diterima di produksi, cookie tanpa `secure`.
+- [x] Input kas tanpa validasi (nominal kosong/negatif, kategori tidak ada).
+- [x] Tunai tidak mengirim kwitansi ke WA (PRD §5.4); WA ke nomor "-" bila orang tua tanpa nomor.
 
 ### B. Fitur PRD yang belum ada (wajib sebelum go-live)
 
-- [ ] **Batas percobaan login gagal** (PRD §5.8).
+- [x] **Batas percobaan login gagal** (PRD §5.8): 5× per email per 15 menit.
 - [ ] **Keringanan:** ubah nominal satu tagihan dengan alasan wajib + audit (`Tagihan.alasan_ubah`, PRD §5.3).
-- [ ] **Alasan tolak** disimpan ke `Pembayaran.alasan_tolak` (sekarang hanya dikirim ke WA).
-- [ ] **Template `tpl_lunas`** dipakai saat verifikasi diterima (sekarang teksnya masih ditulis langsung di kode).
+- [ ] **Alasan tolak** disimpan ke DB. Kolom isian alasan sudah ada dan alasannya dikirim ke WA + audit, tetapi belum ada baris `Pembayaran` untuk bukti yang ditolak.
+- [x] **Template `tpl_lunas`** dipakai untuk konfirmasi lunas (tunai dan transfer).
 - [ ] **Peringatan WA putus lebih dari 10 menit** di dashboard (PRD §6.1). Saat ini dashboard hanya menampilkan "Putus" tanpa menandai lamanya.
 
 ### C. Fitur PRD yang belum ada (boleh menyusul)

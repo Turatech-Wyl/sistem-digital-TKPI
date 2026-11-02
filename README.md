@@ -60,7 +60,7 @@ npm run start              # atau ./run.sh untuk restart otomatis (log di data/l
 | Hal | Aturan |
 |---|---|
 | Antrean | Dicek tiap 5 detik. Balasan didahulukan (dengan "mengetik…" 2–5 detik), pengingat paling akhir |
-| Pengingat | Tanggal 1, 10, 17, 24, 31 · 07.00–09.00 Senin–Sabtu · jeda 20–40 detik · maksimal 50 pesan/jam · satu pesan per nomor · nomor tanpa balasan 90 hari dilewati |
+| Pengingat | Tanggal 1, 10, 17, 24, 31 · 07.00–09.00 WIB Senin–Sabtu · jeda 20–40 detik · maksimal 50 pesan/jam · satu pesan per nomor per hari (menyebut semua anak dan tunggakan) · nomor yang sudah lama dihubungi tetapi tidak membalas 90 hari dilewati |
 | Bot | Aturan kata kunci → AI (Gemini, lalu Groq; key di Pengaturan) → inbox "perlu dibalas" |
 | TU membalas dari HP | Bot diam 10 menit di chat itu, dan antrean bot untuk nomor itu dibatalkan |
 | Jeda bot | Menahan kiriman bot/AI/pengingat; balasan TU tetap jalan |
