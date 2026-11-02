@@ -39,7 +39,7 @@ export default async function PengaturanPage() {
         const k = await db.kelas.findUnique({ where: { nama: kelas } });
         if (k) {
           const ex = await db.tarif.findFirst({ where: { kelas_id: k.id }, orderBy: { berlaku_sejak: "desc" } });
-          if (!ex || ex.nominal !== v) await db.tarif.create({ data: { kelas_id: k.id, nominal: v, berlaku_sejak: new Date().toISOString().slice(0, 7), dibuat_oleh: ss.email } });
+          if (!ex || ex.nominal !== v) await db.tarif.create({ data: { kelas_id: k.id, nominal: v, berlaku_sejak: (await import("@/lib/format")).periodeBulanIni(), dibuat_oleh: ss.email } });
         }
       }
     }

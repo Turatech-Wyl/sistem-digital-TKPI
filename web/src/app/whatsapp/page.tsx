@@ -31,7 +31,7 @@ export default async function WAPage({ searchParams }: { searchParams: Promise<{
     if (!ss || ss.peran !== "admin") return;
     const { db } = await import("@/lib/db");
     const nomor = String(form.get("nomor") || "");
-    const isi = String(form.get("isi") || "");
+    const isi = String(form.get("isi") || "").trim();
     if (!nomor || !isi) return;
     await db.waPesan.create({ data: { arah: "keluar", nomor, isi, status: "antre", sumber: "tu" } });
     await db.waPesan.updateMany({ where: { nomor, arah: "masuk", dibaca_tu: false }, data: { dibaca_tu: true } });
@@ -41,6 +41,8 @@ export default async function WAPage({ searchParams }: { searchParams: Promise<{
 
   async function tandaiSemua(form: FormData) {
     "use server";
+    const ss = await (await import("@/lib/auth")).sesi();
+    if (!ss || ss.peran !== "admin") return;
     const { db } = await import("@/lib/db");
     await db.waPesan.updateMany({ where: { nomor: String(form.get("nomor")), arah: "masuk" }, data: { dibaca_tu: true } });
     (await import("next/cache")).revalidatePath("/whatsapp");

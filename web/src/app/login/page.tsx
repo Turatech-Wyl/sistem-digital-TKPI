@@ -10,13 +10,20 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     "use server";
     const email = String(form.get("email") || "").trim().toLowerCase();
     const password = String(form.get("password") || "");
+    const batas = await import("@/lib/batasLogin");
+    if (batas.terkunci(email)) redirect("/login?err=kunci");
     const user = await (await import("@/lib/db")).db.pengguna.findUnique({ where: { email } });
-    if (!user || !user.aktif) redirect("/login?err=1");
-    const ok = await (await import("bcryptjs")).default.compare(password, user.password_hash);
-    if (!ok) redirect("/login?err=1");
+    const ok = !!user && user.aktif && (await (await import("bcryptjs")).default.compare(password, user.password_hash));
+    if (!ok || !user) {
+      batas.catatGagal(email);
+      redirect("/login?err=1");
+    }
+    batas.bersihkan(email);
     await (await import("@/lib/auth")).buatSesi(user.id, user.peran);
     redirect("/dashboard");
   }
+
+  const dev = process.env.NODE_ENV !== "production";
 
   return (
     <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, background: "var(--soft)" }}>
@@ -26,11 +33,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <span>TK Permata Indonesia</span>
         </div>
         <p style={{ fontSize: "0.84rem", color: "var(--muted)" }}>Siswa, SPP, kas, dan WhatsApp — satu aplikasi.</p>
-        {sp.err && <div className="notice">Email atau password salah.</div>}
-        <label className="f">Email<input name="email" type="email" required defaultValue="admin@tk.local" className="field" /></label>
-        <label className="f">Password<input name="password" type="password" required className="field" /></label>
+        {sp.err && <div className="notice">{sp.err === "kunci" ? "Terlalu banyak percobaan gagal. Coba lagi 15 menit lagi." : "Email atau password salah."}</div>}
+        <label className="f">Email<input name="email" type="email" required defaultValue={dev ? "admin@tk.local" : undefined} autoComplete="username" className="field" /></label>
+        <label className="f">Password<input name="password" type="password" required autoComplete="current-password" className="field" /></label>
         <button className="btn" style={{ padding: "10px 14px" }}>Masuk</button>
-        <p style={{ fontSize: "0.74rem", color: "var(--muted)" }}>Akun seed: admin@tk.local / viewer@tk.local</p>
+        {dev && <p style={{ fontSize: "0.74rem", color: "var(--muted)" }}>Akun seed: admin@tk.local / viewer@tk.local</p>}
       </form>
     </main>
   );

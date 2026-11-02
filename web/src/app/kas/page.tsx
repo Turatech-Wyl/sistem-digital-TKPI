@@ -3,7 +3,7 @@ import AppShell from "@/components/AppShell";
 import { SubmitButton } from "@/components/SubmitButton";
 import { sesi } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { rupiah } from "@/lib/format";
+import { rupiah, hariIni } from "@/lib/format";
 
 export const metadata = { title: "Kas" };
 
@@ -27,10 +27,16 @@ export default async function KasPage({ searchParams }: { searchParams: Promise<
       nominal: Number(form.get("nominal")),
       dibuat_oleh: ss.email,
     };
+    const { redirect } = await import("next/navigation");
+    const kat = Number.isInteger(data.kategori_id) ? await db.kasKategori.findUnique({ where: { id: data.kategori_id } }) : null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data.tgl) || !kat || !data.keterangan.trim()
+      || !Number.isInteger(data.nominal) || data.nominal <= 0) {
+      return redirect("/kas?toast=" + encodeURIComponent("Data transaksi tidak valid"));
+    }
+    data.jenis = kat.jenis; // jenis mengikuti kategori agar laporan per kategori konsisten
     const r = await db.kas.create({ data });
     const { catatAudit } = await import("@/lib/audit");
     await catatAudit(ss.email, "kas", "tambah", String(r.id), {}, { keterangan: data.keterangan, nominal: data.nominal });
-    const { redirect } = await import("next/navigation");
     redirect("/kas?toast=" + encodeURIComponent("Transaksi tersimpan ✓"));
   }
 
@@ -91,7 +97,7 @@ export default async function KasPage({ searchParams }: { searchParams: Promise<
         <form action={tambah} className="form-card">
           <h4>+ Transaksi manual</h4>
           <div className="f2">
-            <input name="tgl" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} className="field" />
+            <input name="tgl" type="date" required defaultValue={hariIni()} className="field" />
             <select name="jenis" className="field"><option value="masuk">Masuk</option><option value="keluar">Keluar</option></select>
             <select name="kategori_id" className="field">{kat.map((k) => <option key={k.id} value={k.id}>{k.nama} ({k.jenis})</option>)}</select>
             <input name="nominal" type="number" required placeholder="Nominal" className="field" />

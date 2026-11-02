@@ -13,6 +13,12 @@ export const periodeBulanIni = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
+/** Tanggal lokal YYYY-MM-DD. Jangan pakai toISOString(): itu UTC, mundur sehari sebelum 07.00 WIB. */
+export const hariIni = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+export const periodeValid = (p: string) => /^\d{4}-(0[1-9]|1[0-2])$/.test(p);
+
 /** Normalisasi nomor WA ke 62xxx (PRD §5.7) */
 export function normalisasiWA(input: string): string {
   let s = (input || "").replace(/[^0-9+]/g, "");

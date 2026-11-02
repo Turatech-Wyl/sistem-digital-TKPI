@@ -3,7 +3,7 @@ import AppShell, { pill } from "@/components/AppShell";
 import { SubmitButton } from "@/components/SubmitButton";
 import { sesi } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { rupiah, periodeBulanIni, bulanNama } from "@/lib/format";
+import { rupiah, periodeBulanIni, bulanNama, hariIni, periodeValid } from "@/lib/format";
 
 export const metadata = { title: "Pembayaran" };
 
@@ -11,40 +11,35 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
   const s = await sesi();
   if (!s) redirect("/login");
   const sp = await searchParams;
-  const periode = sp.periode || periodeBulanIni();
+  const periode = sp.periode && periodeValid(sp.periode) ? sp.periode : periodeBulanIni();
 
   async function generate(form: FormData) {
     "use server";
     const ss = await (await import("@/lib/auth")).sesi();
     if (!ss || ss.peran !== "admin") return;
     const { generateTagihan } = await import("@/lib/tagihan");
-    const hasil = await generateTagihan(String(form.get("periode") || ""), ss.email);
+    const { periodeValid } = await import("@/lib/format");
+    if (!periodeValid(String(form.get("periode") || ""))) return;
+    const hasil = await generateTagihan(String(form.get("periode")), ss.email);
     const { catatAudit } = await import("@/lib/audit");
     await catatAudit(ss.email, "tagihan", "generate", String(form.get("periode")), {}, hasil);
     const { redirect } = await import("next/navigation");
     const p = String(form.get("periode"));
-    redirect(`/pembayaran?periode=${p}&toast=` + encodeURIComponent(`${hasil.dibuat} tagihan baru dibuat ✓`));
+    redirect(`/pembayaran?periode=${p}&toast=` + encodeURIComponent(`${hasil.dibuat} tagihan baru dibuat ✓${hasil.tanpa_tarif ? ` · ${hasil.tanpa_tarif} siswa dilewati (tarif kelas belum ada)` : ""}`));
   }
 
   async function catatBayar(form: FormData) {
     "use server";
     const ss = await (await import("@/lib/auth")).sesi();
     if (!ss || ss.peran !== "admin") return;
-    const { db } = await import("@/lib/db");
-    const tagihan_id = Number(form.get("tagihan_id"));
-    const tgl = String(form.get("tgl") || new Date().toISOString().slice(0, 10));
-    const tag = await db.tagihan.findUnique({ where: { id: tagihan_id }, include: { siswa: true } });
-    if (!tag || tag.status === "lunas") return;
-    const no = `KWT/${tgl.slice(0, 4)}/${tgl.slice(5, 7)}/${Date.now().toString().slice(-6)}`;
-    const byr = await db.pembayaran.create({
-      data: { tagihan_id, tgl_bayar: tgl, nominal: tag.nominal, metode: "tunai", no_kwitansi: no, status_verifikasi: "lunas", diverifikasi_oleh: ss.nama, dibuat_oleh: ss.email },
-    });
-    await db.tagihan.update({ where: { id: tagihan_id }, data: { status: "lunas" } });
-    const kat = await db.kasKategori.findUnique({ where: { nama: "SPP" } });
-    if (kat) await db.kas.create({ data: { tgl, jenis: "masuk", kategori_id: kat.id, keterangan: `SPP ${tag.siswa.nama} ${tag.periode}`, nominal: tag.nominal, pembayaran_id: byr.id, dibuat_oleh: ss.email } });
-    const { catatAudit } = await import("@/lib/audit");
-    await catatAudit(ss.email, "pembayaran", "tunai", String(byr.id), { tagihan_id }, { no_kwitansi: no, nominal: tag.nominal });
+    const { lunasiTagihan, kirimKonfirmasiLunas } = await import("@/lib/pembayaran");
+    const hasil = await lunasiTagihan(Number(form.get("tagihan_id")), { metode: "tunai", tgl: String(form.get("tgl") || ""), nama: ss.nama, email: ss.email });
     const { redirect } = await import("next/navigation");
+    if (!hasil) return redirect(`/pembayaran?periode=${periode}&toast=` + encodeURIComponent("Tagihan sudah lunas atau tidak ditemukan"));
+    const { pembayaran: byr, tagihan: tag } = hasil;
+    await kirimKonfirmasiLunas(byr.id, tag.siswa_id);
+    const { catatAudit } = await import("@/lib/audit");
+    await catatAudit(ss.email, "pembayaran", "tunai", String(byr.id), { tagihan_id: tag.id, status: tag.status }, { no_kwitansi: byr.no_kwitansi, nominal: byr.nominal });
     redirect(`/pembayaran?periode=${tag.periode}&toast=` + encodeURIComponent(`Tunai ${tag.siswa.nama} lunas ✓`));
   }
 
@@ -53,45 +48,28 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
     const ss = await (await import("@/lib/auth")).sesi();
     if (!ss || ss.peran !== "admin") return;
     const { db } = await import("@/lib/db");
+    const { redirect } = await import("next/navigation");
+    const { catatAudit } = await import("@/lib/audit");
     const tagihan_id = Number(form.get("tagihan_id"));
     const aksi = String(form.get("aksi"));
-    const tag = await db.tagihan.findUnique({ where: { id: tagihan_id }, include: { siswa: { include: { orang_tua: { include: { orang_tua: true } } } } } });
-    if (!tag) return;
-    const wa = tag.siswa.orang_tua[0]?.orang_tua.wa_utama || "-";
     if (aksi === "terima") {
-      const tgl = new Date().toISOString().slice(0, 10);
-      const no = `KWT/${tgl.slice(0, 4)}/${tgl.slice(5, 7)}/${Date.now().toString().slice(-6)}`;
-      const byr = await db.pembayaran.create({
-        data: { tagihan_id, tgl_bayar: tgl, nominal: tag.nominal, metode: "transfer", no_kwitansi: no, status_verifikasi: "lunas", diverifikasi_oleh: ss.nama, dibuat_oleh: ss.email },
-      });
-      await db.tagihan.update({ where: { id: tagihan_id }, data: { status: "lunas" } });
-      const kat = await db.kasKategori.findUnique({ where: { nama: "SPP" } });
-      if (kat) await db.kas.create({ data: { tgl, jenis: "masuk", kategori_id: kat.id, keterangan: `SPP ${tag.siswa.nama} ${tag.periode}`, nominal: tag.nominal, pembayaran_id: byr.id, dibuat_oleh: ss.email } });
-      const wa = tag.siswa.orang_tua[0]?.orang_tua.wa_utama || "-";
-      // Simpan PDF kwitansi ke media + antrekan ke WA ortu (PRD §5.4 langkah 4)
-      let media: string | null = null;
-      try {
-        const { dataKwitansi, pdfKwitansi } = await import("@/lib/kwitansi");
-        const dk = await dataKwitansi(byr.id);
-        if (dk) {
-          const fs = await import("fs");
-          const path = await import("path");
-          const dir = process.env.DATA_DIR || path.resolve(process.cwd(), "../data");
-          fs.mkdirSync(path.join(dir, "media"), { recursive: true });
-          media = path.join(dir, "media", `kwitansi-${byr.id}.pdf`);
-          fs.writeFileSync(media, await pdfKwitansi(dk));
-        }
-      } catch { /* tanpa lampiran, pesan tetap terkirim */ }
-      await db.waPesan.create({ data: { arah: "keluar", nomor: wa, isi: `Alhamdulillah, pembayaran SPP ${tag.siswa.nama} bulan ${tag.periode} sudah kami terima. Kwitansi terlampir. Terima kasih 🙏 — Asisten TK`, media_file: media, status: "antre", sumber: "bot" } });
-    } else {
-      const alasan = String(form.get("alasan") || "Bukti tidak valid");
-      await db.tagihan.update({ where: { id: tagihan_id }, data: { status: "belum" } });
-      await db.waPesan.create({ data: { arah: "keluar", nomor: wa, isi: `Mohon maaf, bukti pembayaran ditolak (${alasan}). Mohon kirim ulang. — Asisten TK`, status: "antre", sumber: "bot" } });
+      const { lunasiTagihan, kirimKonfirmasiLunas } = await import("@/lib/pembayaran");
+      const hasil = await lunasiTagihan(tagihan_id, { metode: "transfer", nama: ss.nama, email: ss.email });
+      if (!hasil) return redirect(`/pembayaran?periode=${periode}&toast=` + encodeURIComponent("Tagihan tidak lagi menunggu verifikasi"));
+      await kirimKonfirmasiLunas(hasil.pembayaran.id, hasil.tagihan.siswa_id);
+      await catatAudit(ss.email, "pembayaran", "verifikasi-terima", String(tagihan_id), { status: "menunggu_verifikasi" }, { status: "lunas", no_kwitansi: hasil.pembayaran.no_kwitansi });
+      redirect(`/pembayaran?periode=${hasil.tagihan.periode}&toast=` + encodeURIComponent("Bukti diterima, tagihan lunas ✓"));
     }
-    const { catatAudit } = await import("@/lib/audit");
-    await catatAudit(ss.email, "pembayaran", `verifikasi-${aksi}`, String(tagihan_id), { status: "menunggu_verifikasi" }, { status: aksi === "terima" ? "lunas" : "belum" });
-    const { redirect } = await import("next/navigation");
-    redirect(`/pembayaran?periode=${tag.periode}&toast=` + encodeURIComponent(aksi === "terima" ? "Bukti diterima, tagihan lunas ✓" : "Bukti ditolak, ortu diminta kirim ulang"));
+    // Tolak: kembali ke 'belum' hanya bila memang sedang menunggu verifikasi
+    const alasan = String(form.get("alasan") || "").trim() || "bukti tidak sesuai";
+    const ubah = await db.tagihan.updateMany({ where: { id: tagihan_id, status: "menunggu_verifikasi" }, data: { status: "belum" } });
+    const tag = await db.tagihan.findUnique({ where: { id: tagihan_id } });
+    if (!ubah.count || !tag) return redirect(`/pembayaran?periode=${periode}&toast=` + encodeURIComponent("Tagihan tidak lagi menunggu verifikasi"));
+    const { waOrangTua, tandaTangan } = await import("@/lib/pembayaran");
+    const wa = await waOrangTua(tag.siswa_id);
+    if (wa) await db.waPesan.create({ data: { arah: "keluar", nomor: wa, isi: tandaTangan(`Mohon maaf, bukti pembayaran belum dapat kami terima (${alasan}). Mohon kirim ulang bukti transfer ke sini. Terima kasih 🙏`), status: "antre", sumber: "bot" } });
+    await catatAudit(ss.email, "pembayaran", "verifikasi-tolak", String(tagihan_id), { status: "menunggu_verifikasi" }, { status: "belum", alasan });
+    redirect(`/pembayaran?periode=${tag.periode}&toast=` + encodeURIComponent("Bukti ditolak, ortu diminta kirim ulang"));
   }
 
   /** Tautkan bukti tak dikenal ke siswa (satu nomor dua anak, PRD §5.4). */
@@ -109,19 +87,23 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
     redirect(`/pembayaran?toast=` + encodeURIComponent(tag ? "Bukti ditautkan, siap verifikasi ✓" : "Tidak ada tagihan belum lunas untuk siswa ini"));
   }
 
+  const jatuhTempo = (await db.pengaturan.findUnique({ where: { kunci: "jatuh_tempo_tgl" } }))?.nilai || "10";
   const [list, tarif, buktiMasuk] = await Promise.all([
     db.tagihan.findMany({
       where: { periode },
       include: { siswa: { include: { kelas: true, orang_tua: { include: { orang_tua: true } } } }, pembayaran: true },
       orderBy: { status: "asc" },
     }),
-    db.tarif.findMany({ include: { kelas: true } }),
+    db.tarif.findMany({ where: { berlaku_sejak: { lte: periode } }, include: { kelas: true }, orderBy: [{ berlaku_sejak: "desc" }, { id: "desc" }] }),
     // Bukti foto 30 hari terakhir dari pengirim multi-anak yang belum tertaut
     db.waPesan.findMany({ where: { arah: "masuk", media_file: { not: null }, dibuat_pada: { gte: new Date(Date.now() - 30 * 86400_000) } }, orderBy: { dibuat_pada: "desc" }, take: 20 }),
   ]);
   const lunas = list.filter((t) => t.status === "lunas");
   const belum = list.filter((t) => t.status !== "lunas");
-  const nominalInfo = tarif.length ? tarif.map((t) => `${t.kelas.nama} ${rupiah(t.nominal)}`).join(" · ") : "";
+  // Satu tarif per kelas: yang terbaru berlaku pada periode ini (riwayat tarif tetap tersimpan)
+  const tarifPerKelas = new Map<number, (typeof tarif)[number]>();
+  for (const t of tarif) if (!tarifPerKelas.has(t.kelas_id)) tarifPerKelas.set(t.kelas_id, t);
+  const nominalInfo = [...tarifPerKelas.values()].sort((a, b) => a.kelas.urutan - b.kelas.urutan).map((t) => `${t.kelas.nama} ${rupiah(t.nominal)}`).join(" · ");
   const buktiInfo = await Promise.all(buktiMasuk.map(async (b) => {
     const o = await db.orangTua.findFirst({
       where: { OR: [{ wa_utama: b.nomor }, { wa_kedua: b.nomor }] },
@@ -139,7 +121,7 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
   return (
     <AppShell peran={s.peran} nama={s.nama} badge={belum.length || undefined}>
       <div className="s-head">
-        <h3>SPP {bulanNama(periode)}<small>{nominalInfo} · jatuh tempo tgl 10</small></h3>
+        <h3>SPP {bulanNama(periode)}<small>{nominalInfo} · jatuh tempo tgl {jatuhTempo}</small></h3>
         <div className="row">
           <form method="GET" className="row">
             <input type="month" name="periode" defaultValue={periode} className="field" style={{ padding: "8px 10px" }} />
@@ -171,7 +153,7 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
                     {t.status === "belum" && (
                       <form action={catatBayar} className="row">
                         <input type="hidden" name="tagihan_id" value={t.id} />
-                        <input type="date" name="tgl" defaultValue={new Date().toISOString().slice(0, 10)} className="field" style={{ padding: "6px 8px" }} />
+                        <input type="date" name="tgl" defaultValue={hariIni()} className="field" style={{ padding: "6px 8px" }} />
                         <SubmitButton className="btn wa">Tunai ✓</SubmitButton>
                       </form>
                     )}
@@ -179,6 +161,7 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
                       <form action={verifikasi} className="row">
                         <input type="hidden" name="tagihan_id" value={t.id} />
                         <SubmitButton className="btn wa" name="aksi" value="terima">Terima</SubmitButton>
+                        <input name="alasan" placeholder="Alasan tolak" className="field" style={{ padding: "6px 8px", width: 140 }} />
                         <SubmitButton className="btn danger" name="aksi" value="tolak" confirm="Tolak bukti ini? Ortu akan diminta kirim ulang.">Tolak</SubmitButton>
                       </form>
                     )}
