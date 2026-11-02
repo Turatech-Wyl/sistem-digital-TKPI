@@ -6,8 +6,10 @@ set -e
 APP_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 LOG_DIR="${LOG_DIR:-$APP_DIR/data/logs}"
 mkdir -p "$LOG_DIR"
-# Cron tidak memuat profil shell; muat nvm bila ada agar `npm` ditemukan
-[ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" && nvm use 22 >/dev/null 2>&1
+# Cron tidak memuat profil shell: pakai Node 22 dari nvm bila ada. Sengaja tidak `. nvm.sh`,
+# karena skrip itu gagal di bawah `sh` + `set -e` dan menghentikan start.sh tanpa pesan.
+NODE_BIN="$(ls -d "$HOME"/.nvm/versions/node/v22.*/bin 2>/dev/null | sort -V | tail -1)"
+[ -n "$NODE_BIN" ] && export PATH="$NODE_BIN:$PATH"
 # Tanggal kwitansi/kas dan jadwal pengingat mengikuti WIB meski server memakai UTC
 export TZ="${TZ:-Asia/Jakarta}"
 
