@@ -12,6 +12,7 @@ web/prisma/*.db-journal
 web/prisma/*.db-shm
 web/prisma/*.db-wal
 data/*.db
+data/*.db-*
 data/qr.png
 data/qr.txt
 data/wa-status.json
@@ -23,3 +24,4 @@ data/backup/*
 .DS_Store
 data/logs/*
 data/jid-balas.json
+data/login-uji.txt
