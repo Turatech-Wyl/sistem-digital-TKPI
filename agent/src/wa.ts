@@ -13,18 +13,33 @@ export const getSock = () => sock;
 export const apakahTerhubung = () => tersambung && sock !== null;
 let qrTerakhir = 0;
 let tersambung = false;
+// Hanya boleh ada SATU socket per sesi. Dua socket dengan kredensial yang sama saling menendang
+// (kode 440 "conflict: replaced") dan masing-masing menjadwalkan sambung ulang → pingpong tanpa akhir.
+// `generasi` menandai socket aktif; event dari socket lama diabaikan.
+let generasi = 0;
+let timerSambung: NodeJS.Timeout | null = null;
+
+function jadwalSambung(ms: number) {
+  if (timerSambung) clearTimeout(timerSambung);
+  timerSambung = setTimeout(() => { timerSambung = null; connect().catch((e) => console.log("Sambung gagal:", (e as Error).message)); }, ms);
+}
+
+function tutupSocketLama() {
+  const lama = sock;
+  sock = null;
+  tersambung = false;
+  try { lama?.end(undefined); } catch { /* abaikan */ }
+}
 
 /** Watchdog: kalau tidak tersambung dan QR mandek >45 dtk (atau diminta), sambung ulang. */
 export function perluSambungUlang(): boolean {
-  if (tersambung) return false;
+  if (tersambung || timerSambung) return false; // sudah ada sambung ulang terjadwal (mis. setelah scan QR)
   if (fs.existsSync(path.join(DATA_DIR, "qrreq.req"))) return true;
   return qrTerakhir > 0 && Date.now() - qrTerakhir > 45_000;
 }
 
 export async function sambungUlang() {
   fs.rmSync(path.join(DATA_DIR, "qrreq.req"), { force: true });
-  try { (sock as unknown as { ws?: { close(): void } })?.ws?.close(); } catch { /* abaikan */ }
-  sock = null;
   qrTerakhir = 0;
   console.log("Menyambung ulang untuk QR baru…");
   await connect();
@@ -33,12 +48,13 @@ export async function cekPermintaanPutus() {
   const f = path.join(DATA_DIR, "unlink.req");
   if (!fs.existsSync(f)) return;
   fs.rmSync(f, { force: true });
+  generasi++; // event close dari logout jangan memicu sambung ulang sendiri
   try { await sock?.logout(); } catch { /* abaikan */ }
+  tutupSocketLama();
   fs.rmSync(path.join(process.cwd(), "auth"), { recursive: true, force: true });
-  sock = null;
   tulisStatus({ connected: false, updated_at: new Date().toISOString(), last_error: "diputus oleh TU" });
   console.log("Perangkat diputus atas permintaan TU. Membuat QR baru…");
-  setTimeout(connect, 3000);
+  jadwalSambung(3000);
 }
 
 // Nomor asli → JID tempat chat masuk (bisa @lid). Balasan harus ke JID ini;
@@ -87,11 +103,17 @@ async function simpanMedia(msg: Parameters<typeof downloadMediaMessage>[0], pdf:
 }
 
 export async function connect() {
+  if (timerSambung) { clearTimeout(timerSambung); timerSambung = null; }
+  const ini = ++generasi;
+  tutupSocketLama();
   const { state, saveCreds } = await useMultiFileAuthState(path.join(process.cwd(), "auth"));
-  sock = makeWASocket({ auth: state, printQRInTerminal: false });
+  if (ini !== generasi) return sock; // ada connect() lain yang lebih baru selama menunggu
+  const s = makeWASocket({ auth: state, printQRInTerminal: false });
+  sock = s;
 
-  sock.ev.on("creds.update", saveCreds);
-  sock.ev.on("connection.update", async (u) => {
+  s.ev.on("creds.update", saveCreds);
+  s.ev.on("connection.update", async (u) => {
+    if (ini !== generasi) return; // socket lama
     const { connection, lastDisconnect, qr } = u;
     if (qr) {
       console.log("Scan QR dari halaman Pengaturan → WhatsApp:");
@@ -102,27 +124,37 @@ export async function connect() {
     if (connection === "open") {
       hapusQR();
       tersambung = true;
-      const phone = (sock?.user?.id || "").split(":")[0];
+      qrTerakhir = 0;
+      const phone = (s.user?.id || state.creds.me?.id || "").split(":")[0];
       tulisStatus({ connected: true, phone, updated_at: new Date().toISOString() });
       console.log("Agent terhubung sebagai perangkat tertaut:", phone);
     }
     if (connection === "close") {
       tersambung = false;
+      sock = null;
       const code = (lastDisconnect?.error as Boom)?.output?.statusCode;
       tulisStatus({ connected: false, updated_at: new Date().toISOString(), last_error: `putus (${code})` });
       console.log("Koneksi tertutup, kode:", code);
-      sock = null;
-      if (code !== DisconnectReason.loggedOut) setTimeout(connect, 10_000);
-      else console.log("Logged out — hapus folder agent/auth lalu scan ulang.");
+      if (code === DisconnectReason.loggedOut) {
+        console.log("Logged out — hapus folder agent/auth lalu scan ulang.");
+      } else if (code === DisconnectReason.connectionReplaced) {
+        // Sesi dibuka di tempat lain (mis. agent kedua di mesin lain). Jangan rebutan.
+        console.log("Sesi dipakai proses lain — coba lagi 60 dtk. Pastikan hanya satu agent yang jalan.");
+        jadwalSambung(60_000);
+      } else {
+        // 515 = restart wajib setelah scan QR → segera; lainnya (jaringan, QR habis) → 5 dtk
+        jadwalSambung(code === DisconnectReason.restartRequired ? 500 : 5_000);
+      }
     }
   });
 
-  sock.ev.on("messages.upsert", async (m) => {
+  s.ev.on("messages.upsert", async (m) => {
+    if (ini !== generasi) return;
     for (const msg of m.messages) {
       try { await tanganiPesan(msg); } catch (e) { console.log("Gagal memproses pesan:", (e as Error).message); }
     }
   });
-  return sock;
+  return s;
 }
 
 type Pesan = Parameters<typeof downloadMediaMessage>[0];
