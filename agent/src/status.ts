@@ -5,7 +5,7 @@ import { DATA_DIR } from "./db.js";
 
 export type WaStatus = { connected: boolean; phone?: string; updated_at: string; last_error?: string };
 
-export function tulisStatus(s: WaStatus) {
+export function tulisStatus(s: Omit<WaStatus, "updated_at"> & { updated_at?: string }) {
   fs.writeFileSync(path.join(DATA_DIR, "wa-status.json"), JSON.stringify({ ...s, updated_at: new Date().toISOString() }));
 }
 

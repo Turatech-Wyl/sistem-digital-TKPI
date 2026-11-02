@@ -1,6 +1,11 @@
 import { db, getPengaturan } from "./db.js";
 import type { Niat } from "./bot.js";
 
+// Batas tunggu per penyedia: API free tier kadang lambat; lebih baik pindah ke penyedia berikutnya / inbox.
+const TIMEOUT_AI = 8_000;
+// Di bawah ambang ini bot diam dan pesan masuk inbox (PRD §7).
+export const AMBANG_YAKIN = 0.7;
+
 // Satu antarmuka agar penyedia bisa diganti dari konfigurasi (PRD §7)
 export interface AiProvider {
   nama: string;
@@ -12,8 +17,8 @@ class GeminiProvider implements AiProvider {
   async tanya(prompt: string): Promise<string> {
     const key = getPengaturan("gemini_key", "");
     if (!key) throw new Error("tanpa key");
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${key}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(TIMEOUT_AI),
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 300 } }),
     });
     if (!r.ok) throw new Error(`gemini ${r.status}`);
@@ -27,8 +32,8 @@ class GroqProvider implements AiProvider {
   async tanya(prompt: string): Promise<string> {
     const key = getPengaturan("groq_key", "");
     if (!key) throw new Error("tanpa key");
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+    const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST", signal: AbortSignal.timeout(TIMEOUT_AI),
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
       body: JSON.stringify({ model: "llama-3.1-8b-instant", messages: [{ role: "user", content: prompt }], temperature: 0.2, max_tokens: 300 }),
     });
@@ -71,6 +76,7 @@ Basis pengetahuan:\n${basis}\n\nPesan ortu: "${teks.slice(0, 500)}"\n\nJawab HAN
   return null; // kuota habis / API gagal → dilewati diam-diam (PRD §7)
 }
 
+const NIAT_BOT = ["tagihan", "rekening", "riwayat", "kwitansi", "sapa"] as const;
 export function niatAIkeBot(niat: string): Niat {
-  return (["tagihan", "rekening", "riwayat", "kwitansi", "sapa"] as const).includes(niat as Niat) ? (niat as Niat) : null;
+  return (NIAT_BOT as readonly string[]).includes(niat) ? (niat as Niat) : null;
 }

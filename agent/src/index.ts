@@ -1,5 +1,6 @@
 // Agent WA Tahap 3 (PRD §6): koneksi Baileys, antrean kirim, pesan masuk,
 // pengingat terjadwal, generate tagihan tgl 1, backup 02.00.
+import "./tz.js";
 import cron from "node-cron";
 
 // Jangan mati karena error async yang tak tertangani (mis. timeout jaringan) — cukup catat
@@ -34,4 +35,4 @@ setInterval(async () => {
   }
 }, 30_000);
 
-console.log("Agent jalan: antrean 60 dtk, pengingat 10 mnt, tagihan tgl 1, backup 02.00.");
+console.log("Agent jalan: antrean 5 dtk, pengingat 10 mnt, tagihan tgl 1, backup 02.00.");

@@ -8,6 +8,8 @@ LOG_DIR="${LOG_DIR:-$APP_DIR/data/logs}"
 mkdir -p "$LOG_DIR"
 # Cron tidak memuat profil shell; muat nvm bila ada agar `npm` ditemukan
 [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"
+# Tanggal kwitansi/kas dan jadwal pengingat mengikuti WIB meski server memakai UTC
+export TZ="${TZ:-Asia/Jakarta}"
 
 # Web di port internal (Cloudflare Tunnel meneruskan ke sini); samakan dengan WEB_URL agent
 (cd "$APP_DIR/web" && PORT="${PORT:-3001}" npm run start >> "$LOG_DIR/web.log" 2>&1) &
