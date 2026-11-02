@@ -51,7 +51,7 @@ export function buatPengingat() {
   // Semua tagihan belum lunas sampai bulan ini (tunggakan lama ikut disebut), siswa aktif saja
   const rows = db.prepare(`
     SELECT t.periode, t.nominal, s.nama AS siswa,
-           COALESCE(o.nama_ibu, o.nama_ayah, '') AS ortu, o.wa_utama AS wa
+           COALESCE(NULLIF(o.nama_ibu, '-'), o.nama_ayah, '') AS ortu, o.wa_utama AS wa
     FROM Tagihan t JOIN Siswa s ON s.id = t.siswa_id
     JOIN SiswaOrangTua so ON so.siswa_id = s.id JOIN OrangTua o ON o.id = so.orang_tua_id
     WHERE t.periode <= ? AND t.status = 'belum' AND s.status = 'aktif' AND COALESCE(o.wa_utama, '') <> ''

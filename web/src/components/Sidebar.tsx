@@ -41,18 +41,17 @@ export default function Sidebar({ peran, nama, badge }: { peran: string; nama: s
         );
       })}
       <div className="who">
-        <b>{nama}</b>
-        <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span className="capitalize">{peran}</span>
-          <ThemeToggle />
-        </span>
-        <span>
-          <Link href="/akun" style={{ fontWeight: 600 }}>Akun</Link>
-          {" · "}
-          <form action="/api/auth/logout" method="POST" className="inline">
-            <button className="font-semibold hover:underline" style={{ color: "var(--red)" }}>Keluar</button>
+        <div className="who-id">
+          <i>{nama.slice(0, 1).toUpperCase()}</i>
+          <span><b>{nama}</b><span className="capitalize">{peran}</span></span>
+        </div>
+        <ThemeToggle />
+        <div className="who-act">
+          <Link href="/akun">Akun</Link>
+          <form action="/api/auth/logout" method="POST">
+            <button type="submit">Keluar</button>
           </form>
-        </span>
+        </div>
       </div>
     </nav>
   );

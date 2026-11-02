@@ -36,7 +36,7 @@ export type Anak = { id: number; nama: string; kelas: string; ortu: string };
 
 export function anakDariNomor(nomor: string): Anak[] {
   return db.prepare(`
-    SELECT s.id, s.nama, k.nama AS kelas, COALESCE(o.nama_ayah, o.nama_ibu, '') AS ortu
+    SELECT s.id, s.nama, k.nama AS kelas, COALESCE(NULLIF(o.nama_ibu, '-'), o.nama_ayah, '') AS ortu
     FROM OrangTua o JOIN SiswaOrangTua so ON so.orang_tua_id = o.id
     JOIN Siswa s ON s.id = so.siswa_id JOIN Kelas k ON k.id = s.kelas_id
     WHERE (o.wa_utama = ? OR o.wa_kedua = ?) AND s.status = 'aktif'

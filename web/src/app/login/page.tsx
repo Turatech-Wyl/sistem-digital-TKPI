@@ -34,7 +34,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         </div>
         <p style={{ fontSize: "0.84rem", color: "var(--muted)" }}>Siswa, SPP, kas, dan WhatsApp — satu aplikasi.</p>
         {sp.err && <div className="notice">{sp.err === "kunci" ? "Terlalu banyak percobaan gagal. Coba lagi 15 menit lagi." : "Email atau password salah."}</div>}
-        <label className="f">Email<input name="email" type="email" required defaultValue={dev ? "admin@tk.local" : undefined} autoComplete="username" className="field" /></label>
+        <label className="f">Email<input name="email" type="text" required defaultValue={dev ? "admin@tk.local" : undefined} autoComplete="username" className="field" /></label>
         <label className="f">Password<input name="password" type="password" required autoComplete="current-password" className="field" /></label>
         <button className="btn" style={{ padding: "10px 14px" }}>Masuk</button>
         {dev && <p style={{ fontSize: "0.74rem", color: "var(--muted)" }}>Akun seed: admin@tk.local / viewer@tk.local</p>}

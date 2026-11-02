@@ -26,6 +26,10 @@ export default async function PengaturanPage() {
       const v = form.get(k);
       if (v !== null) await db.pengaturan.upsert({ where: { kunci: k }, update: { nilai: String(v) }, create: { kunci: k, nilai: String(v) } });
     }
+    // Mode uji WA: kosong = kirim ke semua; diisi = agent hanya mengirim ke nomor ini
+    const uji = String(form.get("wa_uji_nomor") ?? "").trim();
+    const ujiNorm = uji ? (await import("@/lib/format")).normalisasiWA(uji) : "";
+    await db.pengaturan.upsert({ where: { kunci: "wa_uji_nomor" }, update: { nilai: ujiNorm }, create: { kunci: "wa_uji_nomor", nilai: ujiNorm } });
     // Kunci AI: hanya timpa bila diisi (jangan tampilkan ulang)
     for (const k of ["gemini_key", "groq_key"]) {
       const v = String(form.get(k) || "").trim();
@@ -74,6 +78,7 @@ export default async function PengaturanPage() {
   const keys = ["sekolah_nama", "sekolah_alamat", "rekening_bank", "rekening_nomor", "rekening_nama", "jatuh_tempo_tgl", "wa_sekolah", "tpl_pengingat", "tpl_lunas", "tpl_bukti"];
   const vals: Record<string, string> = {};
   for (const k of keys) vals[k] = await get(k);
+  const ujiNomor = await get("wa_uji_nomor");
   const tarif = await db.tarif.findMany({ include: { kelas: true }, orderBy: { berlaku_sejak: "desc" } });
   const tarifNow: Record<string, number> = {};
   for (const t of tarif) if (!(t.kelas.nama in tarifNow)) tarifNow[t.kelas.nama] = t.nominal;
@@ -109,6 +114,9 @@ export default async function PengaturanPage() {
           <textarea name="tpl_lunas" rows={3} defaultValue={vals.tpl_lunas} className="field" /></label>
         <label className="f">Template bukti diterima
           <textarea name="tpl_bukti" rows={2} defaultValue={vals.tpl_bukti} className="field" /></label>
+        <label className="f">Mode uji WhatsApp {ujiNomor ? <span className="st wn">AKTIF</span> : <span className="hint">(nonaktif — kirim ke semua orang tua)</span>}
+          <input name="wa_uji_nomor" defaultValue={ujiNomor} placeholder="Kosongkan untuk kirim ke semua" className="field" />
+          <span className="hint">Bila diisi, bot hanya mengirim ke nomor ini; pesan ke nomor lain tertahan di antrean.</span></label>
         <div className="f2">
           <label className="f">Gemini API key {geminiAda ? "(terisi ✓)" : "(kosong — AI dilewati)"}<input name="gemini_key" type="password" placeholder="Isi untuk mengganti" className="field" /></label>
           <label className="f">Groq API key {groqAda ? "(terisi ✓)" : "(kosong)"}<input name="groq_key" type="password" placeholder="Isi untuk mengganti" className="field" /></label>

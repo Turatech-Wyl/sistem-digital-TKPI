@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import AppShell, { pill } from "@/components/AppShell";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -88,7 +89,7 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
   }
 
   const jatuhTempo = (await db.pengaturan.findUnique({ where: { kunci: "jatuh_tempo_tgl" } }))?.nilai || "10";
-  const [list, tarif, buktiMasuk] = await Promise.all([
+  const [list, tarif, buktiMasuk, pengingatAkhir] = await Promise.all([
     db.tagihan.findMany({
       where: { periode },
       include: { siswa: { include: { kelas: true, orang_tua: { include: { orang_tua: true } } } }, pembayaran: true },
@@ -97,6 +98,7 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
     db.tarif.findMany({ where: { berlaku_sejak: { lte: periode } }, include: { kelas: true }, orderBy: [{ berlaku_sejak: "desc" }, { id: "desc" }] }),
     // Bukti foto 30 hari terakhir dari pengirim multi-anak yang belum tertaut
     db.waPesan.findMany({ where: { arah: "masuk", media_file: { not: null }, dibuat_pada: { gte: new Date(Date.now() - 30 * 86400_000) } }, orderBy: { dibuat_pada: "desc" }, take: 20 }),
+    db.waPesan.findFirst({ where: { arah: "keluar", sumber: "pengingat" }, orderBy: { dibuat_pada: "desc" } }),
   ]);
   const lunas = list.filter((t) => t.status === "lunas");
   const belum = list.filter((t) => t.status !== "lunas");
@@ -135,15 +137,17 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
       <div className="kpis k3">
         <div className="kpi"><span>Lunas</span><b>{lunas.length}</b><i>{rupiah(lunas.reduce((a, t) => a + t.nominal, 0))}</i></div>
         <div className="kpi"><span>Belum</span><b>{belum.length}</b><i className="warn">{rupiah(belum.reduce((a, t) => a + t.nominal, 0))}</i></div>
-        <div className="kpi"><span>Pengingat terakhir</span><b style={{ fontSize: "1.1rem" }}>Hari ini</b><i>07.00 otomatis</i></div>
+        <div className="kpi"><span>Pengingat terakhir</span>
+          <b style={{ fontSize: "1.1rem" }}>{pengingatAkhir ? pengingatAkhir.dibuat_pada.toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Belum pernah"}</b>
+          <i>otomatis 07.00–09.00 pada tanggal pengingat</i></div>
       </div>
-      <div className="card tbl">
+      {list.length > 0 && <div className="card tbl">
         <table className="grid-t">
           <thead><tr><th>Siswa</th><th>Orang tua</th><th className="num">Nominal</th><th>Status</th><th>Kwitansi</th>{s.peran === "admin" && <th>Aksi</th>}</tr></thead>
           <tbody>
             {list.map((t) => (
               <tr key={t.id}>
-                <td><b>{t.siswa.nama}</b><small style={{ display: "block", color: "var(--muted)" }}>{t.siswa.kelas.nama}</small></td>
+                <td><Link href={`/siswa/${t.siswa.id}`} className="link">{t.siswa.nama}</Link><small style={{ display: "block", color: "var(--muted)" }}>{t.siswa.kelas.nama}</small></td>
                 <td>{t.siswa.orang_tua.map((o) => o.orang_tua.nama_ibu || o.orang_tua.nama_ayah).join(", ")}</td>
                 <td className="num">{t.nominal.toLocaleString("id-ID")}</td>
                 <td>{pill(t.status)}</td>
@@ -172,7 +176,7 @@ export default async function PembayaranPage({ searchParams }: { searchParams: P
             ))}
           </tbody>
         </table>
-      </div>
+      </div>}
       {list.length === 0 && <div className="notice">Belum ada tagihan periode ini. Klik <b>Generate tagihan</b>.</div>}
       {s.peran === "admin" && perluTaut.length > 0 && (
         <div className="card">
